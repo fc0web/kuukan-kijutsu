@@ -1,0 +1,524 @@
+{
+  "unit-circle": {
+    "description": "半径 1 の単位円（中心 原点）",
+    "rationale": "中心 (0,0)・半径 1。周 = 2π ≈ 6.2832、面積 = π ≈ 3.1416。",
+    "findings": [
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          2
+        ],
+        "metrics": {
+          "r": 1,
+          "circumference": 6.2832,
+          "area": 3.1416
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "two-concentric": {
+    "description": "同心円（中心は共通、半径が違う）",
+    "rationale": "両方の中心が (0,0)。d = 0 < eps → concentric。|r1-r2| = 2 で同一ではない。",
+    "findings": [
+      {
+        "category": "circle-circle",
+        "type": "concentric",
+        "refs": [
+          2,
+          3
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          2
+        ],
+        "metrics": {
+          "r": 1,
+          "circumference": 6.2832,
+          "area": 3.1416
+        }
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          3
+        ],
+        "metrics": {
+          "r": 3,
+          "circumference": 18.8496,
+          "area": 28.2743
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "external-tangent": {
+    "description": "外接する 2 円",
+    "rationale": "中心間距離 d=5、r1+r2=2+3=5。|d-(r1+r2)|=0 → tangent-external。",
+    "findings": [
+      {
+        "category": "circle-circle",
+        "type": "tangent-external",
+        "refs": [
+          3,
+          4
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          3
+        ],
+        "metrics": {
+          "r": 2,
+          "circumference": 12.5664,
+          "area": 12.5664
+        }
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 3,
+          "circumference": 18.8496,
+          "area": 28.2743
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "internal-tangent": {
+    "description": "内接する 2 円（小さい方が内側で接する）",
+    "rationale": "d=2、|r1-r2|=|4-2|=2 → tangent-internal。小円の中心 (2,0) が大円 (r=4) の内側にある。",
+    "findings": [
+      {
+        "category": "circle-circle",
+        "type": "tangent-internal",
+        "refs": [
+          3,
+          4
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          3
+        ],
+        "metrics": {
+          "r": 4,
+          "circumference": 25.1327,
+          "area": 50.2655
+        }
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 2,
+          "circumference": 12.5664,
+          "area": 12.5664
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "intersect-two-circles": {
+    "description": "2 円が交わる（交点 2）",
+    "rationale": "d=6、r1+r2=10、|r1-r2|=0。|r1-r2| < d < r1+r2 → intersect。判別式 h² = 25 - 9 = 16 > 0。",
+    "findings": [
+      {
+        "category": "circle-circle",
+        "type": "intersect",
+        "refs": [
+          3,
+          4
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          3
+        ],
+        "metrics": {
+          "r": 5,
+          "circumference": 31.4159,
+          "area": 78.5398
+        }
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 5,
+          "circumference": 31.4159,
+          "area": 78.5398
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "inside-not-touching": {
+    "description": "小さい方の円が内側にあるが接していない",
+    "rationale": "d=1、|r1-r2|=3。d < |r1-r2| → inside。接しない。",
+    "findings": [
+      {
+        "category": "circle-circle",
+        "type": "inside",
+        "refs": [
+          3,
+          4
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          3
+        ],
+        "metrics": {
+          "r": 5,
+          "circumference": 31.4159,
+          "area": 78.5398
+        }
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 2,
+          "circumference": 12.5664,
+          "area": 12.5664
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "separate-circles": {
+    "description": "2 円が離れている",
+    "rationale": "d=10、r1+r2=5。d > r1+r2 → separate。",
+    "findings": [
+      {
+        "category": "circle-circle",
+        "type": "separate",
+        "refs": [
+          3,
+          4
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          3
+        ],
+        "metrics": {
+          "r": 2,
+          "circumference": 12.5664,
+          "area": 12.5664
+        }
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 3,
+          "circumference": 18.8496,
+          "area": 28.2743
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "circle-line-tangent": {
+    "description": "円と直線が接する",
+    "rationale": "円の中心 (0,0)・半径 3、直線 y=3（線分 (-5,3)-(5,3)）。距離 3 = r → tangent。",
+    "findings": [
+      {
+        "category": "circle-line",
+        "type": "tangent",
+        "refs": [
+          4,
+          "2-3"
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 3,
+          "circumference": 18.8496,
+          "area": 28.2743
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "circle-line-intersect": {
+    "description": "円と直線が交わる（交点 2）",
+    "rationale": "円 (0,0)・r=5、直線 y=3。距離 3 < 5 → intersect。",
+    "findings": [
+      {
+        "category": "circle-line",
+        "type": "intersect",
+        "refs": [
+          4,
+          "2-3"
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 5,
+          "circumference": 31.4159,
+          "area": 78.5398
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "circle-line-separate": {
+    "description": "円と直線が離れている",
+    "rationale": "円 (0,0)・r=2、直線 y=4。距離 4 > 2 → separate。",
+    "findings": [
+      {
+        "category": "circle-line",
+        "type": "separate",
+        "refs": [
+          4,
+          "2-3"
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 2,
+          "circumference": 12.5664,
+          "area": 12.5664
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "circumscribed-triangle": {
+    "description": "直角三角形の外接円",
+    "rationale": "三角形 (0,0)-(8,0)-(0,6) は直角三角形で、外接円の中心は斜辺の中点 (4,3)、半径 = 斜辺/2 = 5。3 本の辺の直線はすべて中心からの距離が半径より小さいので、円は 3 辺の直線と交わる。",
+    "findings": [
+      {
+        "category": "circle-line",
+        "type": "intersect",
+        "refs": [
+          8,
+          "1-2"
+        ]
+      },
+      {
+        "category": "circle-line",
+        "type": "intersect",
+        "refs": [
+          8,
+          "1-3"
+        ]
+      },
+      {
+        "category": "circle-line",
+        "type": "intersect",
+        "refs": [
+          8,
+          "2-3"
+        ]
+      },
+      {
+        "category": "circle-triangle",
+        "type": "circumscribed",
+        "refs": [
+          8,
+          [
+            1,
+            2,
+            3
+          ]
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          8
+        ],
+        "metrics": {
+          "r": 5,
+          "circumference": 31.4159,
+          "area": 78.5398
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "inscribed-triangle": {
+    "description": "直角三角形の内接円",
+    "rationale": "三角形 (0,0)-(8,0)-(0,6)。辺長 8, 6, 10、半周 s=12、面積 24、内半径 r = 24/12 = 2。内心は辺長加重重心 = ((10·0+6·8+8·0)/24, (10·0+6·0+8·6)/24) = (2, 2)。3 辺すべてに接する。",
+    "findings": [
+      {
+        "category": "circle-line",
+        "type": "tangent",
+        "refs": [
+          8,
+          "1-2"
+        ]
+      },
+      {
+        "category": "circle-line",
+        "type": "tangent",
+        "refs": [
+          8,
+          "1-3"
+        ]
+      },
+      {
+        "category": "circle-line",
+        "type": "tangent",
+        "refs": [
+          8,
+          "2-3"
+        ]
+      },
+      {
+        "category": "circle-triangle",
+        "type": "inscribed",
+        "refs": [
+          8,
+          [
+            1,
+            2,
+            3
+          ]
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          8
+        ],
+        "metrics": {
+          "r": 2,
+          "circumference": 12.5664,
+          "area": 12.5664
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "barely-tangent-inside-tol": {
+    "description": "ぎりぎり接する（許容内）：2 円の中心間距離がわずかに和より大きい",
+    "rationale": "d=5.05、sum=5、diff=0.05。非スナップで TOL=0.02、eps=0.02×5=0.1。|d-sum|=0.05 < 0.1 → tangent-external。",
+    "findings": [
+      {
+        "category": "circle-circle",
+        "type": "tangent-external",
+        "refs": [
+          3,
+          4
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          3
+        ],
+        "metrics": {
+          "r": 2.5,
+          "circumference": 15.708,
+          "area": 19.635
+        }
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 2.5,
+          "circumference": 15.708,
+          "area": 19.635
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "barely-not-touching-outside-tol": {
+    "description": "ぎりぎり交わらない（許容外）：中心間距離が和より少し大きく、tol の外側",
+    "rationale": "d=5.2、sum=5、差=0.2。eps=0.1。|d-sum|=0.2 > 0.1 → 接するでも交わるでもなく separate。",
+    "findings": [
+      {
+        "category": "circle-circle",
+        "type": "separate",
+        "refs": [
+          3,
+          4
+        ]
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          3
+        ],
+        "metrics": {
+          "r": 2.5,
+          "circumference": 15.708,
+          "area": 19.635
+        }
+      },
+      {
+        "category": "circle",
+        "type": "basic",
+        "refs": [
+          4
+        ],
+        "metrics": {
+          "r": 2.5,
+          "circumference": 15.708,
+          "area": 19.635
+        }
+      }
+    ],
+    "rejected": []
+  }
+}

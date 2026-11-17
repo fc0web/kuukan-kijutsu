@@ -135,6 +135,68 @@ const spaces = {
       { id: 6, kind: "segment", a: 3, b: 4 }
     ],
     step: 0, source: "human"
+  },
+  // 単独の円（面積・周の捏造の土台）：半径 3 → 周 ≈ 18.85, 面積 ≈ 28.27
+  circleOnly: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "point", x: 0, y: 0 },
+      { id: 2, kind: "circle", c: 1, r: 3 }
+    ],
+    step: 0, source: "human"
+  },
+  // 離れている 2 円（接していない）: d=10, sum=5
+  twoCirclesSeparate: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "point", x: 0, y: 0 },
+      { id: 2, kind: "point", x: 10, y: 0 },
+      { id: 3, kind: "circle", c: 1, r: 2 },
+      { id: 4, kind: "circle", c: 2, r: 3 }
+    ],
+    step: 0, source: "human"
+  },
+  // 交わる 2 円: d=6, r1=r2=5 → 交わる（接していない）
+  twoCirclesCross: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "point", x: 0, y: 0 },
+      { id: 2, kind: "point", x: 6, y: 0 },
+      { id: 3, kind: "circle", c: 1, r: 5 },
+      { id: 4, kind: "circle", c: 2, r: 5 }
+    ],
+    step: 0, source: "human"
+  },
+  // 直角三角形＋任意の円（外接でも内接でもない位置）
+  triPlusOffCircle: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "point", x: 0, y: 0 },
+      { id: 2, kind: "point", x: 8, y: 0 },
+      { id: 3, kind: "point", x: 0, y: 6 },
+      { id: 4, kind: "segment", a: 1, b: 2 },
+      { id: 5, kind: "segment", a: 2, b: 3 },
+      { id: 6, kind: "segment", a: 3, b: 1 },
+      { id: 7, kind: "point", x: 10, y: 10 },
+      { id: 8, kind: "circle", c: 7, r: 3 }
+    ],
+    step: 0, source: "human"
+  },
+  // 外接円の直角三角形：中心 (4,3) 半径 5 のときだけ外接。
+  // ここでは中心を (4,3) に置くが円を持つ（本来の外接）→ 捏造では半径だけずらす
+  triWithCircumcircle: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "point", x: 0, y: 0 },
+      { id: 2, kind: "point", x: 8, y: 0 },
+      { id: 3, kind: "point", x: 0, y: 6 },
+      { id: 4, kind: "segment", a: 1, b: 2 },
+      { id: 5, kind: "segment", a: 2, b: 3 },
+      { id: 6, kind: "segment", a: 3, b: 1 },
+      { id: 7, kind: "point", x: 4, y: 3 },
+      { id: 8, kind: "circle", c: 7, r: 4 }  // 本当は 5 であるべき
+    ],
+    step: 0, source: "human"
   }
 };
 
@@ -294,6 +356,105 @@ const mutations = [
       value: { angleDiff: 0 },
       basis: "（捏造）",
       refs: [5, 6], certainty: "厳密"
+    }
+  },
+  {
+    name: "wrong-circle-area",
+    note: "半径 3 の円に「面積 = 29.7（本当は 28.27）」の札（内接多角形計算で落ちるはず）",
+    space: spaces.circleOnly,
+    finding: {
+      key: "geometry:circle:basic:2",
+      reader: "geometry",
+      type: "circle:basic",
+      title: "円",
+      value: {
+        center_id: 1, cx: 0, cy: 0, r: 3,
+        circumference: 2 * Math.PI * 3,
+        area: 29.7                      // 本当は π·9 ≈ 28.274
+      },
+      refs: [2], certainty: "厳密", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-circle-circumference",
+    note: "半径 3 の円に「周 = 20（本当は 18.85）」の札",
+    space: spaces.circleOnly,
+    finding: {
+      key: "geometry:circle:basic:2",
+      reader: "geometry",
+      type: "circle:basic",
+      title: "円",
+      value: {
+        center_id: 1, cx: 0, cy: 0, r: 3,
+        circumference: 20,              // 本当は 2π·3 ≈ 18.85
+        area: Math.PI * 9
+      },
+      refs: [2], certainty: "厳密", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-cc-tangent-ext",
+    note: "離れている 2 円（d=10 > sum=5）に「外接する」の札",
+    space: spaces.twoCirclesSeparate,
+    finding: {
+      key: "geometry:circle-circle:tangent-external:3|4",
+      reader: "geometry",
+      type: "circle-circle:tangent-external",
+      title: "外接する 2 円",
+      value: { d: 10, r1: 2, r2: 3, sum: 5, diff: 1 },
+      refs: [3, 4], certainty: "厳密", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-cc-inside",
+    note: "離れている 2 円に「内側にある」の札",
+    space: spaces.twoCirclesSeparate,
+    finding: {
+      key: "geometry:circle-circle:inside:3|4",
+      reader: "geometry",
+      type: "circle-circle:inside",
+      title: "小さい方の円がもう一方の内側にある",
+      value: { d: 10, r1: 2, r2: 3, sum: 5, diff: 1 },
+      refs: [3, 4], certainty: "厳密", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-cc-tangent-on-intersect",
+    note: "交わっている 2 円（d=6, 5+5=10, 0）に「外接する」の札（判別式で h²>0 なので接ではない）",
+    space: spaces.twoCirclesCross,
+    finding: {
+      key: "geometry:circle-circle:tangent-external:3|4",
+      reader: "geometry",
+      type: "circle-circle:tangent-external",
+      title: "外接する 2 円",
+      value: { d: 6, r1: 5, r2: 5, sum: 10, diff: 0 },
+      refs: [3, 4], certainty: "厳密", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-circumscribed",
+    note: "外接円の位置に無い円 (10,10) r=3 に「外接円」の札",
+    space: spaces.triPlusOffCircle,
+    finding: {
+      key: "geometry:circle-triangle:circumscribed:8|1-2-3",
+      reader: "geometry",
+      type: "circle-triangle:circumscribed",
+      title: "外接円",
+      value: { r: 3, triangle_ids: [1, 2, 3] },
+      refs: [8, [1, 2, 3]], certainty: "厳密", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-inscribed-center-right",
+    note: "中心は外接円の中心 (4,3) だが、半径を 4 にずらした円に「内接円」の札（本来の内接円の中心は (2,2) r=2）",
+    space: spaces.triWithCircumcircle,
+    finding: {
+      key: "geometry:circle-triangle:inscribed:8|1-2-3",
+      reader: "geometry",
+      type: "circle-triangle:inscribed",
+      title: "内接円",
+      value: { r: 4, triangle_ids: [1, 2, 3] },
+      refs: [8, [1, 2, 3]], certainty: "厳密", basis: "（捏造）"
     }
   }
 ];

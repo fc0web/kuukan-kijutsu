@@ -1,0 +1,293 @@
+{
+  "schema": "kuukan-kijutsu-tests/circle/1.0",
+  "note": "円を含むテストケース。期待される発見は手計算で決める（v0.1 に答えがないため根拠を rationale に書く）。",
+  "cases": [
+    {
+      "name": "unit-circle",
+      "description": "半径 1 の単位円（中心 原点）",
+      "rationale": "中心 (0,0)・半径 1。周 = 2π ≈ 6.2832、面積 = π ≈ 3.1416。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "circle", "c": 1, "r": 1}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [2], "metrics": {"r": 1, "circumference": 6.2832, "area": 3.1416}}
+      ]
+    },
+    {
+      "name": "two-concentric",
+      "description": "同心円（中心は共通、半径が違う）",
+      "rationale": "両方の中心が (0,0)。d = 0 < eps → concentric。|r1-r2| = 2 で同一ではない。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "circle", "c": 1, "r": 1},
+          {"id": 3, "kind": "circle", "c": 1, "r": 3}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [2]},
+        {"category": "circle", "type": "basic", "refs": [3]},
+        {"category": "circle-circle", "type": "concentric", "refs": [2, 3]}
+      ]
+    },
+    {
+      "name": "external-tangent",
+      "description": "外接する 2 円",
+      "rationale": "中心間距離 d=5、r1+r2=2+3=5。|d-(r1+r2)|=0 → tangent-external。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 5, "y": 0},
+          {"id": 3, "kind": "circle", "c": 1, "r": 2},
+          {"id": 4, "kind": "circle", "c": 2, "r": 3}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [3]},
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-circle", "type": "tangent-external", "refs": [3, 4]}
+      ]
+    },
+    {
+      "name": "internal-tangent",
+      "description": "内接する 2 円（小さい方が内側で接する）",
+      "rationale": "d=2、|r1-r2|=|4-2|=2 → tangent-internal。小円の中心 (2,0) が大円 (r=4) の内側にある。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 2, "y": 0},
+          {"id": 3, "kind": "circle", "c": 1, "r": 4},
+          {"id": 4, "kind": "circle", "c": 2, "r": 2}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [3]},
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-circle", "type": "tangent-internal", "refs": [3, 4]}
+      ]
+    },
+    {
+      "name": "intersect-two-circles",
+      "description": "2 円が交わる（交点 2）",
+      "rationale": "d=6、r1+r2=10、|r1-r2|=0。|r1-r2| < d < r1+r2 → intersect。判別式 h² = 25 - 9 = 16 > 0。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 6, "y": 0},
+          {"id": 3, "kind": "circle", "c": 1, "r": 5},
+          {"id": 4, "kind": "circle", "c": 2, "r": 5}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [3]},
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-circle", "type": "intersect", "refs": [3, 4]}
+      ]
+    },
+    {
+      "name": "inside-not-touching",
+      "description": "小さい方の円が内側にあるが接していない",
+      "rationale": "d=1、|r1-r2|=3。d < |r1-r2| → inside。接しない。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 1, "y": 0},
+          {"id": 3, "kind": "circle", "c": 1, "r": 5},
+          {"id": 4, "kind": "circle", "c": 2, "r": 2}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [3]},
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-circle", "type": "inside", "refs": [3, 4]}
+      ]
+    },
+    {
+      "name": "separate-circles",
+      "description": "2 円が離れている",
+      "rationale": "d=10、r1+r2=5。d > r1+r2 → separate。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 10, "y": 0},
+          {"id": 3, "kind": "circle", "c": 1, "r": 2},
+          {"id": 4, "kind": "circle", "c": 2, "r": 3}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [3]},
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-circle", "type": "separate", "refs": [3, 4]}
+      ]
+    },
+    {
+      "name": "circle-line-tangent",
+      "description": "円と直線が接する",
+      "rationale": "円の中心 (0,0)・半径 3、直線 y=3（線分 (-5,3)-(5,3)）。距離 3 = r → tangent。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": -5, "y": 3},
+          {"id": 3, "kind": "point", "x": 5, "y": 3},
+          {"id": 4, "kind": "circle", "c": 1, "r": 3},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-line", "type": "tangent", "refs": [4, "2-3"]}
+      ]
+    },
+    {
+      "name": "circle-line-intersect",
+      "description": "円と直線が交わる（交点 2）",
+      "rationale": "円 (0,0)・r=5、直線 y=3。距離 3 < 5 → intersect。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": -10, "y": 3},
+          {"id": 3, "kind": "point", "x": 10, "y": 3},
+          {"id": 4, "kind": "circle", "c": 1, "r": 5},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-line", "type": "intersect", "refs": [4, "2-3"]}
+      ]
+    },
+    {
+      "name": "circle-line-separate",
+      "description": "円と直線が離れている",
+      "rationale": "円 (0,0)・r=2、直線 y=4。距離 4 > 2 → separate。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": -5, "y": 4},
+          {"id": 3, "kind": "point", "x": 5, "y": 4},
+          {"id": 4, "kind": "circle", "c": 1, "r": 2},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-line", "type": "separate", "refs": [4, "2-3"]}
+      ]
+    },
+    {
+      "name": "circumscribed-triangle",
+      "description": "直角三角形の外接円",
+      "rationale": "三角形 (0,0)-(8,0)-(0,6) は直角三角形で、外接円の中心は斜辺の中点 (4,3)、半径 = 斜辺/2 = 5。3 本の辺の直線はすべて中心からの距離が半径より小さいので、円は 3 辺の直線と交わる。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 8, "y": 0},
+          {"id": 3, "kind": "point", "x": 0, "y": 6},
+          {"id": 4, "kind": "segment", "a": 1, "b": 2},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3},
+          {"id": 6, "kind": "segment", "a": 3, "b": 1},
+          {"id": 7, "kind": "point", "x": 4, "y": 3},
+          {"id": 8, "kind": "circle", "c": 7, "r": 5}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [8]},
+        {"category": "circle-line", "type": "intersect", "refs": [8, "1-2"]},
+        {"category": "circle-line", "type": "intersect", "refs": [8, "2-3"]},
+        {"category": "circle-line", "type": "intersect", "refs": [8, "1-3"]},
+        {"category": "circle-triangle", "type": "circumscribed", "refs": [8, [1, 2, 3]]}
+      ]
+    },
+    {
+      "name": "inscribed-triangle",
+      "description": "直角三角形の内接円",
+      "rationale": "三角形 (0,0)-(8,0)-(0,6)。辺長 8, 6, 10、半周 s=12、面積 24、内半径 r = 24/12 = 2。内心は辺長加重重心 = ((10·0+6·8+8·0)/24, (10·0+6·0+8·6)/24) = (2, 2)。3 辺すべてに接する。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 8, "y": 0},
+          {"id": 3, "kind": "point", "x": 0, "y": 6},
+          {"id": 4, "kind": "segment", "a": 1, "b": 2},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3},
+          {"id": 6, "kind": "segment", "a": 3, "b": 1},
+          {"id": 7, "kind": "point", "x": 2, "y": 2},
+          {"id": 8, "kind": "circle", "c": 7, "r": 2}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [8]},
+        {"category": "circle-line", "type": "tangent", "refs": [8, "1-2"]},
+        {"category": "circle-line", "type": "tangent", "refs": [8, "2-3"]},
+        {"category": "circle-line", "type": "tangent", "refs": [8, "1-3"]},
+        {"category": "circle-triangle", "type": "inscribed", "refs": [8, [1, 2, 3]]}
+      ]
+    },
+    {
+      "name": "barely-tangent-inside-tol",
+      "description": "ぎりぎり接する（許容内）：2 円の中心間距離がわずかに和より大きい",
+      "rationale": "d=5.05、sum=5、diff=0.05。非スナップで TOL=0.02、eps=0.02×5=0.1。|d-sum|=0.05 < 0.1 → tangent-external。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 5.05, "y": 0},
+          {"id": 3, "kind": "circle", "c": 1, "r": 2.5},
+          {"id": 4, "kind": "circle", "c": 2, "r": 2.5}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [3]},
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-circle", "type": "tangent-external", "refs": [3, 4]}
+      ]
+    },
+    {
+      "name": "barely-not-touching-outside-tol",
+      "description": "ぎりぎり交わらない（許容外）：中心間距離が和より少し大きく、tol の外側",
+      "rationale": "d=5.2、sum=5、差=0.2。eps=0.1。|d-sum|=0.2 > 0.1 → 接するでも交わるでもなく separate。",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 5.2, "y": 0},
+          {"id": 3, "kind": "circle", "c": 1, "r": 2.5},
+          {"id": 4, "kind": "circle", "c": 2, "r": 2.5}
+        ],
+        "step": 0, "source": "test"
+      },
+      "expected": [
+        {"category": "circle", "type": "basic", "refs": [3]},
+        {"category": "circle", "type": "basic", "refs": [4]},
+        {"category": "circle-circle", "type": "separate", "refs": [3, 4]}
+      ]
+    }
+  ]
+}

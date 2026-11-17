@@ -1,7 +1,7 @@
 {
-  "count": 10,
+  "count": 17,
   "all_rejected": true,
-  "rejected_count": 10,
+  "rejected_count": 17,
   "passed_through_by_mistake": 0,
   "outcome": [
     {
@@ -92,6 +92,69 @@
       "finding_title": "平行",
       "check_pass": false,
       "method": "方向ベクトルの sin θ がほぼ 0 であることで平行を再確認（厳密）",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-circle-area",
+      "note": "半径 3 の円に「面積 = 29.7（本当は 28.27）」の札（内接多角形計算で落ちるはず）",
+      "finding_type": "circle:basic",
+      "finding_title": "円",
+      "check_pass": false,
+      "method": "正 n=512 の内接多角形で周と面積を計算して照合",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-circle-circumference",
+      "note": "半径 3 の円に「周 = 20（本当は 18.85）」の札",
+      "finding_type": "circle:basic",
+      "finding_title": "円",
+      "check_pass": false,
+      "method": "正 n=512 の内接多角形で周と面積を計算して照合",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-cc-tangent-ext",
+      "note": "離れている 2 円（d=10 > sum=5）に「外接する」の札",
+      "finding_type": "circle-circle:tangent-external",
+      "finding_title": "外接する 2 円",
+      "check_pass": false,
+      "method": "連立円の式を解いて交点数（判別式 h²）を数え、中心の内外で包含を判定",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-cc-inside",
+      "note": "離れている 2 円に「内側にある」の札",
+      "finding_type": "circle-circle:inside",
+      "finding_title": "小さい方の円がもう一方の内側にある",
+      "check_pass": false,
+      "method": "連立円の式を解いて交点数（判別式 h²）を数え、中心の内外で包含を判定",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-cc-tangent-on-intersect",
+      "note": "交わっている 2 円（d=6, 5+5=10, 0）に「外接する」の札（判別式で h²>0 なので接ではない）",
+      "finding_type": "circle-circle:tangent-external",
+      "finding_title": "外接する 2 円",
+      "check_pass": false,
+      "method": "連立円の式を解いて交点数（判別式 h²）を数え、中心の内外で包含を判定",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-circumscribed",
+      "note": "外接円の位置に無い円 (10,10) r=3 に「外接円」の札",
+      "finding_type": "circle-triangle:circumscribed",
+      "finding_title": "外接円",
+      "check_pass": false,
+      "method": "3 点から外接円の中心と半径を公式で算出して円と照合",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-inscribed-center-right",
+      "note": "中心は外接円の中心 (4,3) だが、半径を 4 にずらした円に「内接円」の札（本来の内接円の中心は (2,2) r=2）",
+      "finding_type": "circle-triangle:inscribed",
+      "finding_title": "内接円",
+      "check_pass": false,
+      "method": "内心を辺長加重重心から、内半径を 面積/半周 から独立に算出して照合",
       "expected": "pass:false（間違った発見は check で落ちるべき）"
     }
   ]

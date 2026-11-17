@@ -9,8 +9,8 @@
 (function (root) {
 
   const ID = "geometry";
-  const VERSION = "0.2.0";
-  const ACCEPTS = ["point", "segment"];
+  const VERSION = "0.3.0";
+  const ACCEPTS = ["point", "segment", "circle"];
 
   // --- 幾何の道具（純粋関数） -----------------------------------------
   const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
@@ -19,10 +19,16 @@
   const len = v => Math.hypot(v.x, v.y);
   const dist = (a, b) => len(sub(a, b));
 
-  function isSnappedSpace(points) {
+  function isSnappedSpace(points, circles) {
     for (const p of points) {
       if (Math.abs(p.x - Math.round(p.x)) > 1e-9) return false;
       if (Math.abs(p.y - Math.round(p.y)) > 1e-9) return false;
+    }
+    if (circles) {
+      for (const c of circles) {
+        const r2 = c.r * 2;
+        if (Math.abs(r2 - Math.round(r2)) > 1e-9) return false;
+      }
     }
     return true;
   }
@@ -230,7 +236,8 @@
     const shapes = (space && space.shapes) || [];
     const points = shapes.filter(s => ACCEPTS.includes(s.kind) && s.kind === "point");
     const segments = shapes.filter(s => ACCEPTS.includes(s.kind) && s.kind === "segment");
-    const snap = isSnappedSpace(points);
+    const circlesRaw = shapes.filter(s => ACCEPTS.includes(s.kind) && s.kind === "circle");
+    const snap = isSnappedSpace(points, circlesRaw);
     const tol = makeTol(snap);
     const findings = [];
 
@@ -424,6 +431,151 @@
       });
     }
 
+    // --- 円・円と線・円と円・円と三角形 -------------------------------
+    const circles = circlesRaw.filter(c => pointMap.has(c.c));
+
+    // 円の基本：周・面積
+    for (const c of circles) {
+      const center = pointMap.get(c.c);
+      findings.push({
+        key: "geometry:circle:basic:" + c.id,
+        reader: ID,
+        type: "circle:basic",
+        title: "円",
+        value: {
+          center_id: c.c,
+          cx: center.x, cy: center.y,
+          r: c.r,
+          circumference: 2 * Math.PI * c.r,
+          area: Math.PI * c.r * c.r
+        },
+        basis: "周 = 2 × π × 半径、面積 = π × 半径²",
+        refs: [c.id],
+        certainty: snap ? "厳密" : "許容内"
+      });
+    }
+
+    // 円と線：すべての (円, 線分) 対を分類（交わる・接する・離れている）
+    for (const c of circles) {
+      const center = pointMap.get(c.c);
+      for (const s of segArr) {
+        const A = pointMap.get(s.a), B = pointMap.get(s.b);
+        if (!A || !B) continue;
+        const ABx = B.x - A.x, ABy = B.y - A.y;
+        const ABlen2 = ABx * ABx + ABy * ABy;
+        if (ABlen2 < 1e-24) continue;
+        const ABlen = Math.sqrt(ABlen2);
+        const ACx = center.x - A.x, ACy = center.y - A.y;
+        const distLine = Math.abs(ABx * ACy - ABy * ACx) / ABlen;
+        const epsCL = tol.TOL * Math.max(c.r, 1);
+        let rel;
+        if (Math.abs(distLine - c.r) < epsCL) rel = "tangent";
+        else if (distLine < c.r) rel = "intersect";
+        else rel = "separate";
+        findings.push({
+          key: "geometry:circle-line:" + rel + ":" + c.id + "|" + segKeyStr(s.a, s.b),
+          reader: ID,
+          type: "circle-line:" + rel,
+          title: rel === "tangent" ? "円と線が接する" :
+                 rel === "intersect" ? "円と線が交わる（交点 2）" :
+                 "円と線は離れている",
+          value: { distance: distLine, r: c.r },
+          basis: rel === "tangent" ? "中心と直線の距離が半径にほぼ等しい" :
+                 rel === "intersect" ? "中心と直線の距離が半径より小さい" :
+                 "中心と直線の距離が半径より大きい",
+          refs: [c.id, s.id],
+          certainty: snap ? "厳密" : "許容内"
+        });
+      }
+    }
+
+    // 円と円：すべての (円, 円) 対を分類
+    for (let i = 0; i < circles.length; i++) {
+      for (let j = i + 1; j < circles.length; j++) {
+        const c1 = circles[i], c2 = circles[j];
+        const o1 = pointMap.get(c1.c), o2 = pointMap.get(c2.c);
+        const d = Math.hypot(o1.x - o2.x, o1.y - o2.y);
+        const sumR = c1.r + c2.r, diffR = Math.abs(c1.r - c2.r);
+        const epsCC = tol.TOL * Math.max(sumR, 1);
+        if (d < epsCC && Math.abs(c1.r - c2.r) < epsCC) continue; // 同一円は出さない
+        let rel;
+        if (d < epsCC) rel = "concentric";
+        else if (Math.abs(d - sumR) < epsCC) rel = "tangent-external";
+        else if (diffR > epsCC && Math.abs(d - diffR) < epsCC) rel = "tangent-internal";
+        else if (d > sumR) rel = "separate";
+        else if (d < diffR) rel = "inside";
+        else rel = "intersect";
+        const ids = [c1.id, c2.id].sort((a, b) => a - b);
+        const titles = {
+          "concentric": "同心円",
+          "intersect": "2 円が交わる（交点 2）",
+          "tangent-external": "外接する 2 円",
+          "tangent-internal": "内接する 2 円",
+          "inside": "小さい方の円がもう一方の内側にある",
+          "separate": "2 円は離れている"
+        };
+        findings.push({
+          key: "geometry:circle-circle:" + rel + ":" + ids.join("|"),
+          reader: ID,
+          type: "circle-circle:" + rel,
+          title: titles[rel] || rel,
+          value: { d, r1: c1.r, r2: c2.r, sum: sumR, diff: diffR },
+          basis: "中心間距離 d と、半径の和 r1+r2・差 |r1-r2| を比べて分類",
+          refs: ids,
+          certainty: snap ? "厳密" : "許容内"
+        });
+      }
+    }
+
+    // 円と三角形：外接円（3頂点が円周上）、内接円（3辺が接する）
+    const triangles = polys.filter(p => p.n === 3);
+    for (const c of circles) {
+      const center = pointMap.get(c.c);
+      for (const tri of triangles) {
+        const epsCT = tol.TOL * Math.max(c.r, 1);
+        // 外接円：3頂点までの距離がすべて半径に等しい
+        const vdists = tri.V.map(v => Math.hypot(v.x - center.x, v.y - center.y));
+        const circumscribed = vdists.every(dv => Math.abs(dv - c.r) < epsCT);
+        if (circumscribed) {
+          const triIds = [...tri.ids].sort((a, b) => a - b);
+          findings.push({
+            key: "geometry:circle-triangle:circumscribed:" + c.id + "|" + triIds.join("-"),
+            reader: ID,
+            type: "circle-triangle:circumscribed",
+            title: "外接円",
+            value: { r: c.r, triangle_ids: triIds },
+            basis: "三角形の 3 頂点がすべて円周上にある",
+            refs: [c.id, triIds],
+            certainty: snap ? "厳密" : "許容内"
+          });
+        }
+        // 内接円：3辺(直線)までの距離がすべて半径に等しい
+        const sideDists = [];
+        for (let k = 0; k < 3; k++) {
+          const A = tri.V[k], B = tri.V[(k + 1) % 3];
+          const ABx = B.x - A.x, ABy = B.y - A.y;
+          const ABlen = Math.hypot(ABx, ABy);
+          if (ABlen < 1e-12) { sideDists.push(null); continue; }
+          const ACx = center.x - A.x, ACy = center.y - A.y;
+          sideDists.push(Math.abs(ABx * ACy - ABy * ACx) / ABlen);
+        }
+        const inscribed = sideDists.every(dv => dv !== null && Math.abs(dv - c.r) < epsCT);
+        if (inscribed) {
+          const triIds = [...tri.ids].sort((a, b) => a - b);
+          findings.push({
+            key: "geometry:circle-triangle:inscribed:" + c.id + "|" + triIds.join("-"),
+            reader: ID,
+            type: "circle-triangle:inscribed",
+            title: "内接円",
+            value: { r: c.r, triangle_ids: triIds },
+            basis: "三角形の 3 辺の直線すべてに円が接している",
+            refs: [c.id, triIds],
+            certainty: snap ? "厳密" : "許容内"
+          });
+        }
+      }
+    }
+
     return findings;
   }
 
@@ -582,6 +734,154 @@
       if (brute === null) return { pass: true, method: "線が多いので総当たり照合は省略（推定）" };
       const ok = finding.value.possible === brute;
       return { pass: ok, method: "実際に辿れる道を総当たりで探し、規則の結論と一致するか確かめた" };
+    }
+
+    // --- 円の基本：read は公式（2πr, πr²）。check は多角形近似で別経路。 ---
+    if (finding.type === "circle:basic") {
+      const cid = finding.refs[0];
+      const circle = shapes.find(s => s.kind === "circle" && s.id === cid);
+      if (!circle) return { pass: false, method: "対象の円が見つからない" };
+      const r = circle.r;
+      const n = 512;
+      let perim = 0, area2 = 0;
+      const pts = [];
+      for (let i = 0; i < n; i++) {
+        const t = i * 2 * Math.PI / n;
+        pts.push({ x: r * Math.cos(t), y: r * Math.sin(t) });
+      }
+      for (let i = 0; i < n; i++) {
+        const p = pts[i], q = pts[(i + 1) % n];
+        perim += Math.hypot(q.x - p.x, q.y - p.y);
+        area2 += p.x * q.y - p.y * q.x;
+      }
+      const polyArea = Math.abs(area2) / 2;
+      const isStrict = finding.certainty === "厳密";
+      const eps = isStrict ? 1e-3 : Math.max(tol.TOL, 1e-3);
+      const okC = Math.abs(perim - finding.value.circumference) / Math.max(finding.value.circumference, 1e-9) < eps;
+      const okA = Math.abs(polyArea - finding.value.area) / Math.max(finding.value.area, 1e-9) < eps;
+      return { pass: okC && okA, method: "正 n=512 の内接多角形で周と面積を計算して照合" };
+    }
+
+    // --- 円と線：read は外積で距離。check は射影で垂線の足を求めて距離。 ---
+    if (finding.type && finding.type.startsWith("circle-line:")) {
+      const [cid, sid] = finding.refs;
+      const circle = shapes.find(s => s.kind === "circle" && s.id === cid);
+      const seg = segments.find(x => x.id === sid);
+      if (!circle || !seg) return { pass: false, method: "対象が見つからない" };
+      const center = pointMap.get(circle.c);
+      const A = pointMap.get(seg.a), B = pointMap.get(seg.b);
+      if (!center || !A || !B) return { pass: false, method: "点が見つからない" };
+      const ABx = B.x - A.x, ABy = B.y - A.y;
+      const ABlen2 = ABx * ABx + ABy * ABy;
+      if (ABlen2 < 1e-24) return { pass: false, method: "長さ 0 の線分" };
+      const ACx = center.x - A.x, ACy = center.y - A.y;
+      const proj = (ACx * ABx + ACy * ABy) / ABlen2;
+      const footx = A.x + proj * ABx, footy = A.y + proj * ABy;
+      const d = Math.hypot(center.x - footx, center.y - footy);
+      const r = circle.r;
+      const isStrict = finding.certainty === "厳密";
+      const eps = (isStrict ? 1e-6 : tol.TOL) * Math.max(r, 1);
+      const rel = finding.type.slice("circle-line:".length);
+      let ok = false;
+      if (rel === "tangent") ok = Math.abs(d - r) < eps;
+      else if (rel === "intersect") ok = d < r - eps;
+      else if (rel === "separate") ok = d > r + eps;
+      return { pass: ok, method: "中心から直線への垂線の足を射影(内積)で求め、距離を半径と比較" };
+    }
+
+    // --- 円と円：read は d と r1+r2, |r1-r2| を直接比較。
+    //     check は連立円の式から交点の個数（h²）を独立に数え、包含で補強。 ---
+    if (finding.type && finding.type.startsWith("circle-circle:")) {
+      const [cid1, cid2] = finding.refs;
+      const c1 = shapes.find(s => s.kind === "circle" && s.id === cid1);
+      const c2 = shapes.find(s => s.kind === "circle" && s.id === cid2);
+      if (!c1 || !c2) return { pass: false, method: "対象の円が見つからない" };
+      const o1 = pointMap.get(c1.c), o2 = pointMap.get(c2.c);
+      if (!o1 || !o2) return { pass: false, method: "中心点が見つからない" };
+      const r1 = c1.r, r2 = c2.r;
+      const d = Math.hypot(o1.x - o2.x, o1.y - o2.y);
+      const isStrict = finding.certainty === "厳密";
+      const epsD = (isStrict ? 1e-6 : tol.TOL) * Math.max(r1 + r2, 1);
+      const epsH2 = (isStrict ? 1e-9 : tol.TOL) * 4 * r1 * r2 + 1e-12;
+      // 独立計算：連立円の式を解いて交点の個数を判別式で数える
+      let count;
+      const centersClose = d < epsD;
+      if (centersClose) {
+        count = Math.abs(r1 - r2) < epsD ? Infinity : 0;
+      } else {
+        const a = (r1 * r1 - r2 * r2 + d * d) / (2 * d);
+        const h2 = r1 * r1 - a * a;
+        if (Math.abs(h2) < epsH2) count = 1;
+        else if (h2 > 0) count = 2;
+        else count = 0;
+      }
+      // 包含の独立判定：相手の中心が自分の円の内側にあるか
+      const o1InC2 = d < r2 - epsD;
+      const o2InC1 = d < r1 - epsD;
+      const rel = finding.type.slice("circle-circle:".length);
+      let ok = false;
+      if (rel === "concentric") ok = centersClose && count !== Infinity;
+      else if (rel === "intersect") ok = count === 2;
+      else if (rel === "tangent-external") ok = count === 1 && !o1InC2 && !o2InC1;
+      else if (rel === "tangent-internal") ok = count === 1 && (o1InC2 || o2InC1);
+      else if (rel === "inside") ok = count === 0 && (o1InC2 || o2InC1);
+      else if (rel === "separate") ok = count === 0 && !o1InC2 && !o2InC1 && d > r1 + r2 - epsD;
+      return { pass: ok, method: "連立円の式を解いて交点数（判別式 h²）を数え、中心の内外で包含を判定" };
+    }
+
+    // --- 円と三角形：外接円。
+    //     read は「3頂点までの距離がすべて半径」で判定。
+    //     check は 3 点から外接円の中心と半径を公式で算出して照合（別経路）。 ---
+    if (finding.type === "circle-triangle:circumscribed") {
+      const [cid, triIds] = finding.refs;
+      const circle = shapes.find(s => s.kind === "circle" && s.id === cid);
+      if (!circle) return { pass: false, method: "対象の円が見つからない" };
+      const center = pointMap.get(circle.c);
+      const V = triIds.map(id => pointMap.get(id));
+      if (V.some(v => !v)) return { pass: false, method: "頂点が見つからない" };
+      const [p1, p2, p3] = V;
+      const D = 2 * (p1.x * (p2.y - p3.y) + p2.x * (p3.y - p1.y) + p3.x * (p1.y - p2.y));
+      if (Math.abs(D) < 1e-12) return { pass: false, method: "3 点が一直線上で外接円が定まらない" };
+      const ux = ((p1.x * p1.x + p1.y * p1.y) * (p2.y - p3.y)
+                + (p2.x * p2.x + p2.y * p2.y) * (p3.y - p1.y)
+                + (p3.x * p3.x + p3.y * p3.y) * (p1.y - p2.y)) / D;
+      const uy = ((p1.x * p1.x + p1.y * p1.y) * (p3.x - p2.x)
+                + (p2.x * p2.x + p2.y * p2.y) * (p1.x - p3.x)
+                + (p3.x * p3.x + p3.y * p3.y) * (p2.x - p1.x)) / D;
+      const R = Math.hypot(p1.x - ux, p1.y - uy);
+      const isStrict = finding.certainty === "厳密";
+      const eps = (isStrict ? 1e-6 : tol.TOL) * Math.max(R, 1);
+      const centerOk = Math.hypot(center.x - ux, center.y - uy) < eps;
+      const rOk = Math.abs(R - circle.r) < eps;
+      return { pass: centerOk && rOk, method: "3 点から外接円の中心と半径を公式で算出して円と照合" };
+    }
+
+    // --- 円と三角形：内接円。
+    //     read は「3辺までの距離がすべて半径」で判定。
+    //     check は 内心=辺長による加重重心、内半径=面積/半周 で独立に算出して照合。 ---
+    if (finding.type === "circle-triangle:inscribed") {
+      const [cid, triIds] = finding.refs;
+      const circle = shapes.find(s => s.kind === "circle" && s.id === cid);
+      if (!circle) return { pass: false, method: "対象の円が見つからない" };
+      const center = pointMap.get(circle.c);
+      const V = triIds.map(id => pointMap.get(id));
+      if (V.some(v => !v)) return { pass: false, method: "頂点が見つからない" };
+      const [A, B, C] = V;
+      const a = Math.hypot(B.x - C.x, B.y - C.y);
+      const b = Math.hypot(C.x - A.x, C.y - A.y);
+      const c = Math.hypot(A.x - B.x, A.y - B.y);
+      const sumS = a + b + c;
+      if (sumS < 1e-12) return { pass: false, method: "三角形の辺の長さが 0" };
+      const ix = (a * A.x + b * B.x + c * C.x) / sumS;
+      const iy = (a * A.y + b * B.y + c * C.y) / sumS;
+      const halfP = sumS / 2;
+      const area = Math.sqrt(Math.max(0, halfP * (halfP - a) * (halfP - b) * (halfP - c)));
+      const inradius = area / halfP;
+      const isStrict = finding.certainty === "厳密";
+      const eps = (isStrict ? 1e-6 : tol.TOL) * Math.max(inradius, 1);
+      const centerOk = Math.hypot(center.x - ix, center.y - iy) < eps;
+      const rOk = Math.abs(inradius - circle.r) < eps;
+      return { pass: centerOk && rOk, method: "内心を辺長加重重心から、内半径を 面積/半周 から独立に算出して照合" };
     }
 
     return { pass: false, method: "未対応の種類" };

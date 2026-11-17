@@ -1,0 +1,156 @@
+{
+  "unit-circle": {
+    "description": "半径 1 の単位円（中心 原点）",
+    "expected": 1,
+    "actual": 1,
+    "matched": 1,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "two-concentric": {
+    "description": "同心円（中心は共通、半径が違う）",
+    "expected": 3,
+    "actual": 3,
+    "matched": 3,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "external-tangent": {
+    "description": "外接する 2 円",
+    "expected": 3,
+    "actual": 3,
+    "matched": 3,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "internal-tangent": {
+    "description": "内接する 2 円（小さい方が内側で接する）",
+    "expected": 3,
+    "actual": 3,
+    "matched": 3,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "intersect-two-circles": {
+    "description": "2 円が交わる（交点 2）",
+    "expected": 3,
+    "actual": 3,
+    "matched": 3,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "inside-not-touching": {
+    "description": "小さい方の円が内側にあるが接していない",
+    "expected": 3,
+    "actual": 3,
+    "matched": 3,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "separate-circles": {
+    "description": "2 円が離れている",
+    "expected": 3,
+    "actual": 3,
+    "matched": 3,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "circle-line-tangent": {
+    "description": "円と直線が接する",
+    "expected": 2,
+    "actual": 2,
+    "matched": 2,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "circle-line-intersect": {
+    "description": "円と直線が交わる（交点 2）",
+    "expected": 2,
+    "actual": 2,
+    "matched": 2,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "circle-line-separate": {
+    "description": "円と直線が離れている",
+    "expected": 2,
+    "actual": 2,
+    "matched": 2,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "circumscribed-triangle": {
+    "description": "直角三角形の外接円",
+    "expected": 5,
+    "actual": 5,
+    "matched": 5,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "inscribed-triangle": {
+    "description": "直角三角形の内接円",
+    "expected": 5,
+    "actual": 5,
+    "matched": 5,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "barely-tangent-inside-tol": {
+    "description": "ぎりぎり接する（許容内）：2 円の中心間距離がわずかに和より大きい",
+    "expected": 3,
+    "actual": 3,
+    "matched": 3,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  },
+  "barely-not-touching-outside-tol": {
+    "description": "ぎりぎり交わらない（許容外）：中心間距離が和より少し大きく、tol の外側",
+    "expected": 3,
+    "actual": 3,
+    "matched": 3,
+    "missing": [],
+    "extra": [],
+    "metrics_diff": [],
+    "rejected_by_check": [],
+    "ok": true
+  }
+}

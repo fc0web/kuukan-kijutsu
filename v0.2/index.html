@@ -72,6 +72,7 @@
     <div class="tools">
       <button data-tool="pt">● 点</button>
       <button data-tool="line" class="on">／ 線</button>
+      <button data-tool="circle">○ 円</button>
       <button data-tool="erase">消しゴム</button>
       <button id="undoBtn">元に戻す</button>
       <button id="clearBtn">全部消す</button>
@@ -105,7 +106,7 @@
   </aside>
 </main>
 
-<footer>版 v0.2-work ・ 配置 2026-11-17 JST ・ shape 形式（y 上向き）＋読み手分離</footer>
+<footer>版 v0.2-work ・ 配置 2026-11-18 JST ・ 円を追加（読み手 v0.3.0）</footer>
 
 <script src="../readers/geometry.js"></script>
 <script>
@@ -133,6 +134,7 @@ function snapGrid(g) { return snap ? { x: Math.round(g.x), y: Math.round(g.y) } 
 /* ================= 空間の便利関数 ================= */
 const getPoints = () => SPACE.shapes.filter(s => s.kind === "point");
 const getSegments = () => SPACE.shapes.filter(s => s.kind === "segment");
+const getCircles = () => SPACE.shapes.filter(s => s.kind === "circle");
 function findPointAt(g, r) {
   let best = null, bd = r;
   for (const p of getPoints()) {
@@ -160,7 +162,8 @@ function eraseAt(g) {
   if (p) {
     SPACE.shapes = SPACE.shapes.filter(s =>
       !(s.kind === "point" && s.id === p.id) &&
-      !(s.kind === "segment" && (s.a === p.id || s.b === p.id))
+      !(s.kind === "segment" && (s.a === p.id || s.b === p.id)) &&
+      !(s.kind === "circle" && s.c === p.id)
     );
     return true;
   }
@@ -180,6 +183,22 @@ function eraseAt(g) {
   if (best >= 0) {
     const victim = segs[best];
     SPACE.shapes = SPACE.shapes.filter(s => !(s.kind === "segment" && s.id === victim.id));
+    return true;
+  }
+  // 円の円周の近くをクリックしたら円だけ消す
+  const circles = getCircles();
+  let bestC = -1, bdC = 0.35;
+  for (let i = 0; i < circles.length; i++) {
+    const c = circles[i];
+    const center = getPoints().find(q => q.id === c.c);
+    if (!center) continue;
+    const dd = Math.hypot(g.x - center.x, g.y - center.y);
+    const diff = Math.abs(dd - c.r);
+    if (diff < bdC) { bdC = diff; bestC = i; }
+  }
+  if (bestC >= 0) {
+    const victim = circles[bestC];
+    SPACE.shapes = SPACE.shapes.filter(s => !(s.kind === "circle" && s.id === victim.id));
     return true;
   }
   return false;
@@ -213,10 +232,14 @@ cv.addEventListener("pointerdown", e => {
     pushUndo();
     if (eraseAt(evGrid(e))) { SPACE.step++; sfx(200, .08, "triangle", .04); changed(); }
     else undoStack.pop();
+  } else if (tool === "circle") {
+    const g0 = evGrid(e);
+    const near = findPointAt(g0, 0.46);
+    drag = { mode: "circle", from: near ? { x: near.x, y: near.y } : snapGrid(g0), to: snapGrid(g0) };
   } else {
     const g0 = evGrid(e);
     const near = findPointAt(g0, 0.46);
-    drag = { from: near ? { x: near.x, y: near.y } : snapGrid(g0), to: snapGrid(g0) };
+    drag = { mode: "line", from: near ? { x: near.x, y: near.y } : snapGrid(g0), to: snapGrid(g0) };
   }
 });
 cv.addEventListener("pointermove", e => {
@@ -229,7 +252,16 @@ cv.addEventListener("pointermove", e => {
 });
 cv.addEventListener("pointerup", () => {
   if (!drag) return;
-  if (Math.hypot(drag.from.x - drag.to.x, drag.from.y - drag.to.y) > 0.2) {
+  const dLen = Math.hypot(drag.from.x - drag.to.x, drag.from.y - drag.to.y);
+  if (drag.mode === "circle") {
+    const r = snap ? Math.max(0.5, Math.round(dLen * 2) / 2) : dLen;
+    if (r >= 0.5 - 1e-9) {
+      pushUndo();
+      const center = addPoint(drag.from);
+      SPACE.shapes.push({ id: nextId++, kind: "circle", c: center.id, r });
+      SPACE.step++; sfx(880, .06, "sine", .04); changed();
+    }
+  } else if (dLen > 0.2) {
     pushUndo();
     if (addSeg(drag.from, drag.to)) { SPACE.step++; sfx(440, .06, "sine", .04); changed(); }
     else undoStack.pop();
@@ -467,19 +499,25 @@ const FAM_COL = {
   "polygon:triangle": "#4fc3ff", "polygon:quad": "#5dffa8", "polygon:ngon": "#c79bff",
   "intersection": "#ff7ab6",
   "relation:parallel": "#ffe27a", "relation:perpendicular": "#ffe27a", "collinear": "#ffe27a",
-  "similarity": "#ffb84f", "congruence": "#ffb84f", "euler": "#ffb84f"
+  "similarity": "#ffb84f", "congruence": "#ffb84f", "euler": "#ffb84f",
+  "circle": "#ffe27a", "circle-line": "#a9c8ff", "circle-circle": "#a9c8ff", "circle-triangle": "#ffb84f"
 };
 function famOf(type) {
   if (!type) return "";
   if (type.startsWith("polygon:triangle")) return "polygon:triangle";
   if (type.startsWith("polygon:quad")) return "polygon:quad";
   if (type.startsWith("polygon:")) return "polygon:ngon";
+  if (type === "circle:basic") return "circle";
+  if (type.startsWith("circle-line:")) return "circle-line";
+  if (type.startsWith("circle-circle:")) return "circle-circle";
+  if (type.startsWith("circle-triangle:")) return "circle-triangle";
   return type;
 }
 function tagOf(fam) {
   return ({ "polygon:triangle": "三角形", "polygon:quad": "四角形", "polygon:ngon": "多角形",
     "intersection": "交点", "relation:parallel": "平行", "relation:perpendicular": "垂直",
-    "collinear": "一直線", "similarity": "相似", "congruence": "合同", "euler": "一筆書き" })[fam] || fam;
+    "collinear": "一直線", "similarity": "相似", "congruence": "合同", "euler": "一筆書き",
+    "circle": "円", "circle-line": "円と線", "circle-circle": "円と円", "circle-triangle": "円と三角形" })[fam] || fam;
 }
 
 function renderPanels() {
@@ -487,7 +525,7 @@ function renderPanels() {
   if (!lastFindings.length) {
     F.innerHTML = '<div class="empty">線をドラッグして描いてみてください。読み手が形を読み、確かめた発見だけが並びます。</div>';
   } else {
-    const orderIdx = { "polygon:triangle": 0, "polygon:quad": 1, "polygon:ngon": 2, "relation:parallel": 3, "relation:perpendicular": 3, "collinear": 4, "intersection": 5, "similarity": 6, "congruence": 6, "euler": 7 };
+    const orderIdx = { "polygon:triangle": 0, "polygon:quad": 1, "polygon:ngon": 2, "circle": 3, "circle-line": 4, "circle-circle": 4, "circle-triangle": 5, "relation:parallel": 6, "relation:perpendicular": 6, "collinear": 7, "intersection": 8, "similarity": 9, "congruence": 9, "euler": 10 };
     const list = [...lastFindings].sort((a, b) => (orderIdx[famOf(a.type)] || 9) - (orderIdx[famOf(b.type)] || 9));
     F.innerHTML = list.slice(0, 80).map(f => {
       const fam = famOf(f.type), col = FAM_COL[fam] || "#fff";
@@ -600,6 +638,15 @@ function render() {
     ctx.shadowColor = "#8fb4ff"; ctx.shadowBlur = 6;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   }
+  // 円
+  for (const c of getCircles()) {
+    const center = getPoints().find(p => p.id === c.c);
+    if (!center) continue;
+    const q = gridToPx(center.x, center.y);
+    ctx.strokeStyle = "rgba(255,226,122,.85)"; ctx.lineWidth = 2;
+    ctx.shadowColor = "#ffe27a"; ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.arc(q.x, q.y, c.r * GRID, 0, Math.PI * 2); ctx.stroke();
+  }
   ctx.shadowBlur = 0;
   for (const f of lastFindings) {
     if (f.type === "intersection") {
@@ -615,17 +662,27 @@ function render() {
   }
   if (drag) {
     const a = gridToPx(drag.from.x, drag.from.y), b = gridToPx(drag.to.x, drag.to.y);
-    ctx.strokeStyle = "rgba(255,226,122,.8)"; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
     const dLen = Math.hypot(drag.from.x - drag.to.x, drag.from.y - drag.to.y);
-    ctx.fillStyle = "#ffe27a"; ctx.font = "11px ui-monospace,monospace";
-    ctx.fillText(`長さ ${Math.round(dLen * 100) / 100}`, b.x + 8, b.y - 8);
+    ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5;
+    if (drag.mode === "circle") {
+      const rPreview = snap ? Math.max(0.5, Math.round(dLen * 2) / 2) : dLen;
+      ctx.strokeStyle = "rgba(255,226,122,.6)";
+      ctx.beginPath(); ctx.arc(a.x, a.y, rPreview * GRID, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = "#ffe27a"; ctx.font = "11px ui-monospace,monospace";
+      ctx.fillText(`半径 ${Math.round(rPreview * 100) / 100}`, a.x + 8, a.y - 8);
+    } else {
+      ctx.strokeStyle = "rgba(255,226,122,.8)";
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      ctx.fillStyle = "#ffe27a"; ctx.font = "11px ui-monospace,monospace";
+      ctx.fillText(`長さ ${Math.round(dLen * 100) / 100}`, b.x + 8, b.y - 8);
+    }
+    ctx.setLineDash([]);
   } else if (hover && tool !== "erase") {
     const q = gridToPx(hover.x, hover.y);
     ctx.strokeStyle = "rgba(255,255,255,.25)";
     ctx.beginPath(); ctx.arc(q.x, q.y, 6, 0, Math.PI * 2); ctx.stroke();
   }
-  $("hud").innerHTML = `点 <b>${getPoints().length}</b>　線 <b>${getSegments().length}</b>　${SPACE.step} 手目　｜　読み手 <b>${READERS.length}</b>（${READERS.map(r => r.id).join(", ")}）`;
+  $("hud").innerHTML = `点 <b>${getPoints().length}</b>　線 <b>${getSegments().length}</b>　円 <b>${getCircles().length}</b>　${SPACE.step} 手目　｜　読み手 <b>${READERS.length}</b>（${READERS.map(r => r.id).join(", ")}）`;
 }
 function tick() { render(); requestAnimationFrame(tick); }
 
