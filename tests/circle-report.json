@@ -24,7 +24,19 @@
       "circle:basic": "周・面積は公式（厳密）。check は n=512 内接多角形で 0.1％ 以内",
       "circle-line": "|d − r| < TOL × max(r, 1)",
       "circle-circle": "|d − (r1±r2)| < TOL × max(r1+r2, 1)",
-      "circle-triangle": "3 頂点/3 辺への距離の差 < TOL × max(r, 1)"
+      "circle-triangle": "3 頂点/3 辺への距離の差 < TOL × max(r, 1)",
+      "curve:length": "全点の折れ線長。確かめ：半分に間引いた版と ±5％ 以内で一致",
+      "curve:closure": "始終点の距離 < 0.3 マスなら閉じている",
+      "curve:self-intersection": "非隣接の全ペアの交差を数える（read: t,u 媒介／check: 向きの符号）",
+      "curve:area": "閉じて自己交差なしのときに靴ひも公式。確かめ：半分に間引いた版と ±5％ 以内"
+    },
+    "curve": {
+      "max_points": 2000,
+      "thinning_step_grid": 0.1,
+      "closure_tol_grid": 0.3,
+      "length_tol_rel": 0.05,
+      "area_tol_rel": 0.05,
+      "note": "曲線は certainty を常に「許容内」とし、既存の規則（予想）の当たり外れには用いない"
     }
   },
   "cases": {

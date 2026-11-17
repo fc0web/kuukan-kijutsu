@@ -7,6 +7,7 @@
 const fs = require("fs");
 const path = require("path");
 const Reader = require("../readers/geometry.js");
+const { densifyPolyline, figureEightPts, squarePts } = require("./curve-cases.js");
 
 // --- 検査に使う空間（整数座標・スナップ扱い） --------------------------
 const spaces = {
@@ -195,6 +196,30 @@ const spaces = {
       { id: 6, kind: "segment", a: 3, b: 1 },
       { id: 7, kind: "point", x: 4, y: 3 },
       { id: 8, kind: "circle", c: 7, r: 4 }  // 本当は 5 であるべき
+    ],
+    step: 0, source: "human"
+  },
+  // 曲線：開いた折れ線（始終点が離れている）
+  curveOpen: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "curve", pts: densifyPolyline([[0, 0], [2, 0]], 0.1), closed: false }
+    ],
+    step: 0, source: "human"
+  },
+  // 曲線：閉じた四角形トレース
+  curveSquareClosed: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "curve", pts: squarePts(0, 0, 10, 0.1), closed: true }
+    ],
+    step: 0, source: "human"
+  },
+  // 曲線：8 の字（自己交差 1 回・閉じている）
+  curveFigure8: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "curve", pts: figureEightPts(0.1), closed: true }
     ],
     step: 0, source: "human"
   }
@@ -455,6 +480,84 @@ const mutations = [
       title: "内接円",
       value: { r: 4, triangle_ids: [1, 2, 3] },
       refs: [8, [1, 2, 3]], certainty: "厳密", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-curve-closed-on-open",
+    note: "開いた折れ線（始終点が 2 マス離れている）に「閉じている」の札（check は距離の二乗で測り直すので落ちる）",
+    space: spaces.curveOpen,
+    finding: {
+      key: "geometry:curve:closure:1",
+      reader: "geometry",
+      type: "curve:closure",
+      title: "閉じている曲線",
+      value: { closed: true, gap: 2.0 },
+      refs: [1], certainty: "許容内", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-curve-open-on-closed",
+    note: "閉じたトレースに「開いている」の札（check: 距離の二乗で測り直すと 0.1 で許容内 → 閉じているべき）",
+    space: spaces.curveSquareClosed,
+    finding: {
+      key: "geometry:curve:closure:1",
+      reader: "geometry",
+      type: "curve:closure",
+      title: "開いている曲線",
+      value: { closed: false, gap: 0.1 },
+      refs: [1], certainty: "許容内", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-figure-8-no-cross",
+    note: "8 の字（実際は 1 回自己交差）に「自分と交わらない」の札（check: 向きの符号で 1 回検出）",
+    space: spaces.curveFigure8,
+    finding: {
+      key: "geometry:curve:self-intersection:1",
+      reader: "geometry",
+      type: "curve:self-intersection",
+      title: "曲線は自分と交わらない",
+      value: { count: 0 },
+      refs: [1], certainty: "許容内", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-cross-count-on-simple",
+    note: "単純な正方形トレース（交差なし）に「自分と 3 回交わる」の札（check: 向きの符号で 0 回）",
+    space: spaces.curveSquareClosed,
+    finding: {
+      key: "geometry:curve:self-intersection:1",
+      reader: "geometry",
+      type: "curve:self-intersection",
+      title: "曲線が自分と 3 回交わる",
+      value: { count: 3 },
+      refs: [1], certainty: "許容内", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-curve-length-doubled",
+    note: "正方形トレース（長さ ≈ 40）に「長さ 100」の札（check: 半分に間引いた折れ線で 40 近辺 → ±5% の外）",
+    space: spaces.curveSquareClosed,
+    finding: {
+      key: "geometry:curve:length:1",
+      reader: "geometry",
+      type: "curve:length",
+      title: "曲線の長さ",
+      value: { length: 100, n_pts: 400, closed: true },
+      refs: [1], certainty: "許容内", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-curve-area-doubled",
+    note: "正方形トレース（面積 ≈ 100）に「面積 200」の札（check: 半分に間引いた靴ひもで 100 近辺 → ±5% の外）",
+    space: spaces.curveSquareClosed,
+    finding: {
+      key: "geometry:curve:area:1",
+      reader: "geometry",
+      type: "curve:area",
+      title: "曲線が囲む面積",
+      value: { area: 200 },
+      refs: [1], certainty: "許容内", basis: "（捏造）"
     }
   }
 ];

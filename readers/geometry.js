@@ -9,8 +9,11 @@
 (function (root) {
 
   const ID = "geometry";
-  const VERSION = "0.3.0";
-  const ACCEPTS = ["point", "segment", "circle"];
+  const VERSION = "0.4.0";
+  const ACCEPTS = ["point", "segment", "circle", "curve"];
+  const CURVE_CLOSURE_TOL = 0.3;        // マス単位：始終点がこれ以内なら閉じている
+  const CURVE_LENGTH_TOL = 0.05;        // ±5% 以内（半分間引き照合）
+  const CURVE_AREA_TOL = 0.05;          // ±5% 以内（半分間引き照合）
 
   // --- 幾何の道具（純粋関数） -----------------------------------------
   const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
@@ -225,6 +228,63 @@
   function roundN(v, n) {
     const k = 10 ** n;
     return Math.round(v * k) / k;
+  }
+
+  // --- 曲線の道具 -----------------------------------------------------
+  function curveSegsOf(pts, closed) {
+    const n = pts.length, out = [];
+    for (let i = 0; i < n - 1; i++) {
+      out.push({ a: { x: pts[i][0], y: pts[i][1] }, b: { x: pts[i + 1][0], y: pts[i + 1][1] } });
+    }
+    if (closed && n >= 2) {
+      out.push({ a: { x: pts[n - 1][0], y: pts[n - 1][1] }, b: { x: pts[0][0], y: pts[0][1] } });
+    }
+    return out;
+  }
+  function curvePathLength(pts, closed) {
+    let L = 0;
+    for (let i = 0; i < pts.length - 1; i++) L += Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+    if (closed && pts.length >= 2) L += Math.hypot(pts[0][0] - pts[pts.length - 1][0], pts[0][1] - pts[pts.length - 1][1]);
+    return L;
+  }
+  function curveShoelace(pts) {
+    let A2 = 0;
+    const n = pts.length;
+    for (let i = 0; i < n; i++) A2 += pts[i][0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * pts[i][1];
+    return A2 / 2;
+  }
+  // read 用：パラメータ表示（t,u 媒介）で交差を数える
+  function curveCrossingsParam(pts, closed) {
+    const segs = curveSegsOf(pts, closed);
+    const m = segs.length;
+    let count = 0;
+    for (let i = 0; i < m; i++) {
+      for (let j = i + 1; j < m; j++) {
+        if (j === i + 1) continue;
+        if (closed && i === 0 && j === m - 1) continue;
+        if (segIntersect(segs[i].a, segs[i].b, segs[j].a, segs[j].b)) count++;
+      }
+    }
+    return count;
+  }
+  // check 用：向きの符号（外積の符号）で交差を数える（別経路）
+  function curveCrossingsOrient(pts, closed) {
+    const segs = curveSegsOf(pts, closed);
+    const m = segs.length;
+    let count = 0;
+    for (let i = 0; i < m; i++) {
+      for (let j = i + 1; j < m; j++) {
+        if (j === i + 1) continue;
+        if (closed && i === 0 && j === m - 1) continue;
+        const p1 = segs[i].a, p2 = segs[i].b, p3 = segs[j].a, p4 = segs[j].b;
+        const o1 = Math.sign(cross(sub(p2, p1), sub(p3, p1)));
+        const o2 = Math.sign(cross(sub(p2, p1), sub(p4, p1)));
+        const o3 = Math.sign(cross(sub(p4, p3), sub(p1, p3)));
+        const o4 = Math.sign(cross(sub(p4, p3), sub(p2, p3)));
+        if (o1 !== 0 && o2 !== 0 && o3 !== 0 && o4 !== 0 && o1 !== o2 && o3 !== o4) count++;
+      }
+    }
+    return count;
   }
 
   function segKeyStr(a, b) {
@@ -582,6 +642,78 @@
       }
     }
 
+    // --- 曲線 -----------------------------------------------------------
+    // 曲線は certainty を常に「許容内」とし、許容の値を basis に添える。
+    // 既存の規則（予想）の当たり外れには使わない（type: "curve:*" は
+    // buildAnalysis や規則の適用対象ではない）。
+    const curves = shapes.filter(s => s.kind === "curve" && Array.isArray(s.pts) && s.pts.length >= 2);
+    for (const c of curves) {
+      const closed = !!c.closed;
+      const pts = c.pts;
+      const L = curvePathLength(pts, closed);
+      const dx0 = pts[0][0] - pts[pts.length - 1][0];
+      const dy0 = pts[0][1] - pts[pts.length - 1][1];
+      const gap = Math.hypot(dx0, dy0);
+      const crossings = curveCrossingsParam(pts, closed);
+
+      // 長さ
+      findings.push({
+        key: "geometry:curve:length:" + c.id,
+        reader: ID,
+        type: "curve:length",
+        title: "曲線の長さ",
+        value: { length: L, n_pts: pts.length, closed },
+        basis: "折れ線として隣り合う点の距離を合計"
+             + (closed ? "（閉じ辺を含む）" : "")
+             + "　／　許容：点を半分に間引いた折れ線と ±" + (CURVE_LENGTH_TOL * 100).toFixed(0)
+             + "％ 以内で一致（間引き間隔 ≈ 0.1 マス）",
+        refs: [c.id],
+        certainty: "許容内"
+      });
+
+      // 閉じ具合
+      findings.push({
+        key: "geometry:curve:closure:" + c.id,
+        reader: ID,
+        type: "curve:closure",
+        title: closed ? "閉じている曲線" : "開いている曲線",
+        value: { closed, gap },
+        basis: "始点と終点の距離を測って判定"
+             + "　／　許容：ギャップが " + CURVE_CLOSURE_TOL + " マス以内で閉じていると判定",
+        refs: [c.id],
+        certainty: "許容内"
+      });
+
+      // 自己交差
+      findings.push({
+        key: "geometry:curve:self-intersection:" + c.id,
+        reader: ID,
+        type: "curve:self-intersection",
+        title: crossings > 0 ? ("曲線が自分と " + crossings + " 回交わる") : "曲線は自分と交わらない",
+        value: { count: crossings },
+        basis: "折れ線の非隣接ペアの交差をパラメータ表示 (t,u 媒介) で数えた"
+             + "　／　許容：両端点から 1e-6 以上内側の交点のみ",
+        refs: [c.id],
+        certainty: "許容内"
+      });
+
+      // 面積（閉じていて自己交差がないときのみ）
+      if (closed && crossings === 0) {
+        const A = Math.abs(curveShoelace(pts));
+        findings.push({
+          key: "geometry:curve:area:" + c.id,
+          reader: ID,
+          type: "curve:area",
+          title: "曲線が囲む面積",
+          value: { area: A },
+          basis: "閉じた折れ線として靴ひも公式で面積を算出"
+               + "　／　許容：点を半分に間引いた版と ±" + (CURVE_AREA_TOL * 100).toFixed(0) + "％ 以内で一致",
+          refs: [c.id],
+          certainty: "許容内"
+        });
+      }
+    }
+
     return findings;
   }
 
@@ -890,6 +1022,86 @@
       return { pass: centerOk && rOk, method: "内心を辺長加重重心から、内半径を 面積/半周 から独立に算出して照合" };
     }
 
+    // --- 曲線：長さ ---
+    // read は全点の折れ線長。check は点を半分に間引いた版で再計算し、
+    // ±CURVE_LENGTH_TOL 以内で一致するかを確認（間引きは三角不等式で
+    // 常に長さを短くしかしない）。
+    if (finding.type === "curve:length") {
+      const cid = finding.refs[0];
+      const curve = shapes.find(s => s.kind === "curve" && s.id === cid);
+      if (!curve) return { pass: false, method: "対象の曲線が見つからない" };
+      const half = curve.pts.filter((_, i) => i % 2 === 0);
+      if (half.length < 2) return { pass: false, method: "間引きで点が足りない" };
+      const halfL = curvePathLength(half, !!curve.closed);
+      const orig = finding.value.length;
+      if (orig <= 1e-9) return { pass: false, method: "長さが 0 とされている" };
+      const rel = halfL / orig;
+      // 半分版は 元の長さ以下（三角不等式）、かつ ±5% 以内
+      const upperOk = rel <= 1 + 1e-3;
+      const lowerOk = rel >= 1 - CURVE_LENGTH_TOL;
+      return {
+        pass: upperOk && lowerOk,
+        method: "点を半分に間引いた折れ線で長さを再計算、±" + (CURVE_LENGTH_TOL * 100).toFixed(0) + "％ 以内で一致を確認（間引き比 " + rel.toFixed(4) + "）"
+      };
+    }
+
+    // --- 曲線：閉じ具合 ---
+    // read は hypot で距離を計算。check は距離の二乗（sqrt を使わない）で
+    // 独立に測り、許容 CURVE_CLOSURE_TOL と比較、かつ値の整合も見る。
+    if (finding.type === "curve:closure") {
+      const cid = finding.refs[0];
+      const curve = shapes.find(s => s.kind === "curve" && s.id === cid);
+      if (!curve) return { pass: false, method: "対象の曲線が見つからない" };
+      const pts = curve.pts;
+      if (pts.length < 2) return { pass: false, method: "点が足りない" };
+      const dx = pts[pts.length - 1][0] - pts[0][0];
+      const dy = pts[pts.length - 1][1] - pts[0][1];
+      const gap2 = dx * dx + dy * dy;
+      const shouldBeClosed = gap2 < CURVE_CLOSURE_TOL * CURVE_CLOSURE_TOL;
+      const findingSaysClosed = finding.value.closed;
+      if (shouldBeClosed !== findingSaysClosed) {
+        return { pass: false, method: "始終点の距離の二乗で測り直したが、閉じ札と一致しない（許容 " + CURVE_CLOSURE_TOL + " マス）" };
+      }
+      const gapMeasured = Math.sqrt(gap2);
+      const gapOk = Math.abs(gapMeasured - finding.value.gap) < 1e-6;
+      return {
+        pass: gapOk,
+        method: "始終点の距離の二乗で独立に測り、閉じ札と 許容 " + CURVE_CLOSURE_TOL + " マスで整合・ギャップ値も一致"
+      };
+    }
+
+    // --- 曲線：自己交差 ---
+    // read は t,u 媒介で数える。check は向き（外積の符号）で独立に数える。
+    if (finding.type === "curve:self-intersection") {
+      const cid = finding.refs[0];
+      const curve = shapes.find(s => s.kind === "curve" && s.id === cid);
+      if (!curve) return { pass: false, method: "対象の曲線が見つからない" };
+      const count = curveCrossingsOrient(curve.pts, !!curve.closed);
+      return {
+        pass: count === finding.value.count,
+        method: "折れ線の全ペアを 向き（外積の符号）で数えて照合（独立の方法）"
+      };
+    }
+
+    // --- 曲線：面積 ---
+    // read は全点の靴ひも公式。check は点を半分に間引いた版で再計算。
+    if (finding.type === "curve:area") {
+      const cid = finding.refs[0];
+      const curve = shapes.find(s => s.kind === "curve" && s.id === cid);
+      if (!curve) return { pass: false, method: "対象の曲線が見つからない" };
+      if (!curve.closed) return { pass: false, method: "曲線が閉じていない" };
+      const half = curve.pts.filter((_, i) => i % 2 === 0);
+      if (half.length < 3) return { pass: false, method: "間引きで点が足りない" };
+      const halfA = Math.abs(curveShoelace(half));
+      const orig = finding.value.area;
+      if (orig <= 1e-9) return { pass: false, method: "面積が 0 とされている" };
+      const rel = Math.abs(halfA - orig) / orig;
+      return {
+        pass: rel < CURVE_AREA_TOL,
+        method: "点を半分に間引いた閉じた折れ線で靴ひも公式を再計算、±" + (CURVE_AREA_TOL * 100).toFixed(0) + "％ 以内で一致（差 " + (rel * 100).toFixed(2) + "％）"
+      };
+    }
+
     return { pass: false, method: "未対応の種類" };
   }
 
@@ -912,7 +1124,19 @@
         "circle:basic": "周・面積は公式（厳密）。check は n=512 内接多角形で 0.1％ 以内",
         "circle-line":     "|d − r| < TOL × max(r, 1)",
         "circle-circle":   "|d − (r1±r2)| < TOL × max(r1+r2, 1)",
-        "circle-triangle": "3 頂点/3 辺への距離の差 < TOL × max(r, 1)"
+        "circle-triangle": "3 頂点/3 辺への距離の差 < TOL × max(r, 1)",
+        "curve:length":    "全点の折れ線長。確かめ：半分に間引いた版と ±" + (CURVE_LENGTH_TOL * 100).toFixed(0) + "％ 以内で一致",
+        "curve:closure":   "始終点の距離 < " + CURVE_CLOSURE_TOL + " マスなら閉じている",
+        "curve:self-intersection": "非隣接の全ペアの交差を数える（read: t,u 媒介／check: 向きの符号）",
+        "curve:area":      "閉じて自己交差なしのときに靴ひも公式。確かめ：半分に間引いた版と ±" + (CURVE_AREA_TOL * 100).toFixed(0) + "％ 以内"
+      },
+      curve: {
+        max_points: 2000,
+        thinning_step_grid: 0.1,
+        closure_tol_grid: CURVE_CLOSURE_TOL,
+        length_tol_rel: CURVE_LENGTH_TOL,
+        area_tol_rel: CURVE_AREA_TOL,
+        note: "曲線は certainty を常に「許容内」とし、既存の規則（予想）の当たり外れには用いない"
       }
     };
   }
