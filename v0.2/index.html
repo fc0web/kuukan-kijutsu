@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>何も無い空間 — 描くと読み、確かめ、育つ（v0.2）</title>
+<style>
+  :root{
+    --bg:#04060b; --panel:#0c111d; --line:#1b2540; --ink:#e7edf8; --dim:#8794ae;
+    --pt:#ffffff; --seg:#cfe0ff; --x:#ff7ab6; --tri:#4fc3ff; --quad:#5dffa8; --poly:#c79bff;
+    --gold:#ffe27a; --ok:#5dffa8; --ng:#ff6b7a; --rev:#ffb84f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif}
+  header{padding:12px 16px 4px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0;letter-spacing:.05em}
+  header .sub{color:var(--dim);font-size:12px}
+  .toggles{margin-left:auto;display:flex;gap:6px}
+  main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;padding:8px 12px 16px}
+  @media (max-width:960px){main{grid-template-columns:1fr}}
+  .stage{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    height:min(76vh,720px);min-height:420px;background:#020308}
+  #cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+  .tools{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 20px)}
+  .hud{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--dim);pointer-events:none}
+  .hud b{color:var(--ink)}
+  button{font:inherit;font-size:13px;border:1px solid #2f3b5c;background:#141c32cc;color:var(--ink);
+    border-radius:8px;padding:7px 11px;cursor:pointer;backdrop-filter:blur(4px)}
+  button:hover{background:#1f2a4dcc}
+  button.on{border-color:var(--gold);color:var(--gold)}
+  button.bot{border-color:#7fb0ff;color:#a9c8ff}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .panel+.panel{margin-top:10px}
+  h2{font-size:12px;margin:0 0 8px;color:var(--dim);font-weight:600;letter-spacing:.08em;display:flex;justify-content:space-between}
+  .facts{font-size:13px;line-height:1.55;max-height:260px;overflow:auto}
+  .fact{padding:5px 0;border-bottom:1px dashed #1a2236}
+  .fact .why{font-size:11px;color:var(--dim)}
+  .fact .tag{display:inline-block;font-size:10px;padding:0 6px;border-radius:10px;margin-right:6px;border:1px solid}
+  .fact .cert{display:inline-block;font-size:10px;padding:0 6px;border-radius:10px;margin-left:6px;color:var(--dim);border:1px solid #27324d}
+  .rules{font-size:12.5px;line-height:1.55;max-height:300px;overflow:auto}
+  .rule{padding:7px 8px;border:1px solid #1d2742;border-radius:8px;margin-bottom:6px}
+  .rule .st{font-size:11px;float:right}
+  .rule.ok{border-color:#1f5a40}
+  .rule.ng{border-color:#5a1f2a;opacity:.75}
+  .rule.ng .txt{text-decoration:line-through;text-decoration-color:#ff6b7a88}
+  .rule .meta{font-size:11px;color:var(--dim);margin-top:2px}
+  .readers{font-size:12px;line-height:1.5}
+  .readers .r{padding:4px 8px;border:1px solid #1d2742;border-radius:8px;margin-bottom:4px}
+  .readers .r .meta{font-size:11px;color:var(--dim)}
+  .log{font-size:11.5px;line-height:1.6;max-height:220px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;color:#b7c2db}
+  .log div{border-bottom:1px dashed #19213a;padding:2px 0}
+  .k-new{color:var(--gold)} .k-hit{color:var(--ok)} .k-miss{color:var(--ng)} .k-rev{color:var(--rev)} .k-bear{color:#a9c8ff}
+  .note{font-size:11.5px;color:var(--dim);line-height:1.7}
+  .empty{color:var(--dim);font-size:12px}
+  footer{padding:6px 16px 14px;color:var(--dim);font-size:11px;text-align:center;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<header>
+  <h1>何も無い空間</h1>
+  <span class="sub">点や線を描くと、読み手が形を読み、確かめた発見だけが並びます。</span>
+  <div class="toggles">
+    <button id="bgmBtn">BGM: OFF</button>
+    <button id="sfxBtn">効果音: ON</button>
+  </div>
+</header>
+
+<main>
+  <section class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="tools">
+      <button data-tool="pt">● 点</button>
+      <button data-tool="line" class="on">／ 線</button>
+      <button data-tool="erase">消しゴム</button>
+      <button id="undoBtn">元に戻す</button>
+      <button id="clearBtn">全部消す</button>
+      <button id="snapBtn" class="on">マス目に吸着</button>
+      <button id="botBtn" class="bot">ボットが1手描く</button>
+    </div>
+    <div class="hud" id="hud"></div>
+  </section>
+
+  <aside>
+    <div class="panel">
+      <h2><span>いま読めていること</span><span id="factCount"></span></h2>
+      <div class="facts" id="facts"><div class="empty">線をドラッグして描いてみてください。読み手が形を読み、確かめた発見だけが並びます。</div></div>
+    </div>
+    <div class="panel">
+      <h2><span>規則（予想と当たり外れ）</span><span id="ruleCount"></span></h2>
+      <div class="rules" id="rules"><div class="empty">まだ予想はありません。形を描くと、空間が自分で予想を立て始めます。</div></div>
+    </div>
+    <div class="panel">
+      <h2><span>読み手</span><span id="readerCount"></span></h2>
+      <div class="readers" id="readers"></div>
+    </div>
+    <div class="panel">
+      <h2><span>確かめた記録</span><button id="resetMem" style="padding:2px 8px;font-size:11px">記録を初期化</button></h2>
+      <div class="log" id="log"><div class="empty">まだありません</div></div>
+    </div>
+    <div class="panel note">
+      読み手は空間を書き換えません。発見は「見つけ方（read）」と「確かめ方（check）」を別の計算で行い、
+      check を通ったものだけが記録に残ります。この版では幾何の読み手だけを動かしています。
+    </div>
+  </aside>
+</main>
+
+<footer>版 v0.2-work ・ 配置 2026-11-17 JST ・ shape 形式（y 上向き）＋読み手分離</footer>
+
+<script src="../readers/geometry.js"></script>
+<script>
+"use strict";
+/* ================= 基本 ================= */
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+const GRID = 30;
+let W = 0, H = 0;
+let tool = "line", snap = true;
+
+// 空間：新形式（shapes, y 上向き・マス単位）
+let SPACE = { schema: "kuukan/0.2", shapes: [], step: 0, source: "human" };
+let nextId = 1;
+let undoStack = [];
+let drag = null, hover = null;
+let seenKinds = {};
+let LOG = [];
+
+/* ================= 画面↔空間 の座標変換 ================= */
+function pxToGrid(px, py) { return { x: px / GRID, y: (H - py) / GRID }; }
+function gridToPx(gx, gy) { return { x: gx * GRID, y: H - gy * GRID }; }
+function snapGrid(g) { return snap ? { x: Math.round(g.x), y: Math.round(g.y) } : g; }
+
+/* ================= 空間の便利関数 ================= */
+const getPoints = () => SPACE.shapes.filter(s => s.kind === "point");
+const getSegments = () => SPACE.shapes.filter(s => s.kind === "segment");
+function findPointAt(g, r) {
+  let best = null, bd = r;
+  for (const p of getPoints()) {
+    const d = Math.hypot(p.x - g.x, p.y - g.y);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+function hasSeg(a, b) { return getSegments().some(s => (s.a === a && s.b === b) || (s.a === b && s.b === a)); }
+function addPoint(g) {
+  const e = findPointAt(g, 0.3);
+  if (e) return e;
+  const p = { id: nextId++, kind: "point", x: g.x, y: g.y };
+  SPACE.shapes.push(p);
+  return p;
+}
+function addSeg(gA, gB) {
+  const A = addPoint(gA), B = addPoint(gB);
+  if (A.id === B.id || hasSeg(A.id, B.id)) return false;
+  SPACE.shapes.push({ id: nextId++, kind: "segment", a: A.id, b: B.id });
+  return true;
+}
+function eraseAt(g) {
+  const p = findPointAt(g, 0.4);
+  if (p) {
+    SPACE.shapes = SPACE.shapes.filter(s =>
+      !(s.kind === "point" && s.id === p.id) &&
+      !(s.kind === "segment" && (s.a === p.id || s.b === p.id))
+    );
+    return true;
+  }
+  const segs = getSegments();
+  let best = -1, bd = 0.35;
+  for (let i = 0; i < segs.length; i++) {
+    const s = segs[i];
+    const A = getPoints().find(q => q.id === s.a);
+    const B = getPoints().find(q => q.id === s.b);
+    if (!A || !B) continue;
+    const abx = B.x - A.x, aby = B.y - A.y;
+    const t = Math.max(0, Math.min(1, ((g.x - A.x) * abx + (g.y - A.y) * aby) / (abx * abx + aby * aby)));
+    const cx = A.x + t * abx, cy = A.y + t * aby;
+    const d = Math.hypot(g.x - cx, g.y - cy);
+    if (d < bd) { bd = d; best = i; }
+  }
+  if (best >= 0) {
+    const victim = segs[best];
+    SPACE.shapes = SPACE.shapes.filter(s => !(s.kind === "segment" && s.id === victim.id));
+    return true;
+  }
+  return false;
+}
+
+function pushUndo() {
+  undoStack.push(JSON.stringify({ SPACE, nextId }));
+  if (undoStack.length > 200) undoStack.shift();
+}
+
+function resize() {
+  const r = $("stage").getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  W = r.width; H = r.height; cv.width = W * d; cv.height = H * d;
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+}
+window.addEventListener("resize", resize);
+
+function evPos(e) { const r = cv.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+function evGrid(e) { const p = evPos(e); return pxToGrid(p.x, p.y); }
+
+cv.addEventListener("pointerdown", e => {
+  ensureAudio(); cv.setPointerCapture(e.pointerId);
+  const g = snapGrid(evGrid(e));
+  if (tool === "pt") {
+    pushUndo();
+    const before = getPoints().length;
+    addPoint(g);
+    if (getPoints().length > before) { SPACE.step++; sfx(660, .05, "sine", .04); changed(); }
+    else undoStack.pop();
+  } else if (tool === "erase") {
+    pushUndo();
+    if (eraseAt(evGrid(e))) { SPACE.step++; sfx(200, .08, "triangle", .04); changed(); }
+    else undoStack.pop();
+  } else {
+    const g0 = evGrid(e);
+    const near = findPointAt(g0, 0.46);
+    drag = { from: near ? { x: near.x, y: near.y } : snapGrid(g0), to: snapGrid(g0) };
+  }
+});
+cv.addEventListener("pointermove", e => {
+  const g = evGrid(e);
+  hover = snapGrid(g);
+  if (drag) {
+    const near = findPointAt(g, 0.46);
+    drag.to = near ? { x: near.x, y: near.y } : snapGrid(g);
+  }
+});
+cv.addEventListener("pointerup", () => {
+  if (!drag) return;
+  if (Math.hypot(drag.from.x - drag.to.x, drag.from.y - drag.to.y) > 0.2) {
+    pushUndo();
+    if (addSeg(drag.from, drag.to)) { SPACE.step++; sfx(440, .06, "sine", .04); changed(); }
+    else undoStack.pop();
+  }
+  drag = null;
+});
+cv.addEventListener("pointerleave", () => { hover = null; });
+
+document.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => {
+  tool = b.dataset.tool;
+  document.querySelectorAll("[data-tool]").forEach(x => x.classList.toggle("on", x === b));
+});
+$("undoBtn").onclick = () => {
+  if (undoStack.length) {
+    const d = JSON.parse(undoStack.pop());
+    SPACE = d.SPACE; nextId = d.nextId; SPACE.step++; changed();
+  }
+};
+$("clearBtn").onclick = () => {
+  if (!getPoints().length) return;
+  pushUndo();
+  SPACE = { schema: "kuukan/0.2", shapes: [], step: SPACE.step + 1, source: SPACE.source };
+  changed();
+};
+$("snapBtn").onclick = () => { snap = !snap; $("snapBtn").classList.toggle("on", snap); changed(); };
+
+/* ================= 読み手を呼ぶ ================= */
+const READERS = [GeometryReader];
+
+let lastFindings = [];      // check を通ったもの
+let lastRejected = [];      // check で落ちたもの
+
+function runReaders() {
+  const findings = [];
+  const rejected = [];
+  for (const R of READERS) {
+    const raw = R.read(SPACE);
+    for (const f of raw) {
+      const res = R.check(f, SPACE);
+      if (res.pass) findings.push(Object.assign({}, f, { checked: true, method: res.method }));
+      else rejected.push({ finding: f, reason: res.method });
+    }
+  }
+  return { findings, rejected };
+}
+
+/* ================= 発見 → v0.1 風の解析形に変換（規則エンジン用） ================= */
+function buildAnalysis(findings) {
+  const points = getPoints();
+  const segments = getSegments();
+  const pointMap = new Map(points.map(p => [p.id, p]));
+
+  const segs = segments.map(s => ({
+    a: pointMap.get(s.a), b: pointMap.get(s.b), ia: s.a, ib: s.b, id: s.id
+  })).filter(s => s.a && s.b);
+
+  const polys = [];
+  for (const f of findings) {
+    if (!f.type || !f.type.startsWith("polygon:")) continue;
+    const ids = f.value.vertex_ids_ordered;
+    const V = ids.map(id => pointMap.get(id));
+    if (V.some(v => !v)) continue;
+    polys.push({
+      ids: ids.slice(), V, n: f.value.n,
+      area: f.value.area, perim: f.value.perim,
+      sides: V.map((v, i) => Math.hypot(v.x - V[(i + 1) % V.length].x, v.y - V[(i + 1) % V.length].y)),
+      sortedSides: f.value.sides_sorted.slice(),
+      angles: f.value.angles_ordered.slice(),
+      angleSum: f.value.angleSum,
+      convex: f.value.convex,
+      allEq: f.value.allEq === true,
+      right: f.value.right === true,
+      diagPerp: f.value.diagPerp === true,
+      type: f.title,
+      cx: V.reduce((s, v) => s + v.x, 0) / V.length,
+      cy: V.reduce((s, v) => s + v.y, 0) / V.length,
+      key: f.key
+    });
+  }
+
+  // 相似/合同の finding からキー集合を作って、全ペアに sim フラグを貼る
+  const simKeys = new Set();
+  for (const f of findings) {
+    if (f.type !== "similarity" && f.type !== "congruence") continue;
+    const pair = f.refs.map(arr => [...arr].sort((a, b) => a - b));
+    pair.sort((x, y) => JSON.stringify(x).localeCompare(JSON.stringify(y)));
+    simKeys.add(pair.map(p => p.join("-")).join("|"));
+  }
+  const tris = polys.filter(p => p.n === 3);
+  const pairs = [];
+  for (let i = 0; i < tris.length; i++) {
+    for (let j = i + 1; j < tris.length; j++) {
+      const a = tris[i].sortedSides, b = tris[j].sortedSides;
+      if (!b[0]) continue;
+      const r = a[0] / b[0];
+      const idsA = [...tris[i].ids].sort((x, y) => x - y);
+      const idsB = [...tris[j].ids].sort((x, y) => x - y);
+      const pair = [idsA, idsB].sort((x, y) => JSON.stringify(x).localeCompare(JSON.stringify(y)));
+      const k = pair.map(p => p.join("-")).join("|");
+      pairs.push({ A: tris[i], B: tris[j], sim: simKeys.has(k), r });
+    }
+  }
+
+  const X = findings.filter(f => f.type === "intersection").map(f => ({ x: f.value.x, y: f.value.y }));
+
+  // Euler
+  let euler = null;
+  const ef = findings.find(f => f.type === "euler");
+  if (ef) {
+    euler = {
+      connected: ef.value.connected,
+      odd: ef.value.odd,
+      ruleSays: ef.value.possible,
+      brute: ef.value.brute,
+      m: segs.length,
+      sig: segs.map(s => s.ia + "," + s.ib).sort().join("|")
+    };
+  }
+
+  return { polys, pairs, X, euler, segs };
+}
+
+/* ================= 規則：予想・当たり外れ・修正 ================= */
+const RULE_DEFS = [
+  { id: "C1", scope: "poly", text: "三角形の内角の和は 180° になる",
+    applies: p => p.n === 3, holds: p => Math.abs(p.angleSum - 180) < 0.5,
+    check: "角を一つずつ測って足す" },
+  { id: "C2", scope: "poly", text: "n角形の内角の和は (n−2)×180° になる",
+    applies: p => p.n >= 4, holds: p => Math.abs(p.angleSum - (p.n - 2) * 180) < 0.5,
+    check: "角を一つずつ測って足す" },
+  { id: "C4", scope: "poly", text: "直角三角形では 斜辺² = 他の二辺² の和",
+    applies: p => p.n === 3 && p.right,
+    holds: p => { const s = p.sortedSides; return Math.abs(s[2] * s[2] - (s[0] * s[0] + s[1] * s[1])) < 0.02 * s[2] * s[2]; },
+    check: "角度で直角を見つけ、長さで式を確かめる（別々の計算）" },
+  { id: "C3", scope: "global", text: "つながった図形は、奇数本の線が集まる点が 0 個か 2 個のときだけ一筆書きできる",
+    applies: a => a.euler && a.euler.connected && a.euler.brute !== null,
+    holds: a => a.euler.ruleSays === a.euler.brute,
+    key: a => "e:" + a.euler.sig, check: "実際に辿れる道を総当たりで探して照合" },
+  { id: "N1", scope: "poly", naive: true, revise: "R1", text: "四角形の対角線は直角に交わる",
+    applies: p => p.n === 4 && p.convex, holds: p => p.diagPerp, check: "2本の対角線の向きの差を測る" },
+  { id: "R1", scope: "poly", hidden: true, text: "四辺が等しい四角形（ひし形・正方形）なら、対角線は直角に交わる",
+    applies: p => p.n === 4 && p.convex && p.allEq, holds: p => p.diagPerp, check: "2本の対角線の向きの差を測る" },
+  { id: "N2", scope: "pair", naive: true, revise: "R2", text: "周の長さが長い三角形ほど、面積も大きい",
+    applies: q => Math.abs(q.A.perim - q.B.perim) > 1e-3,
+    holds: q => (q.A.perim - q.B.perim) * (q.A.area - q.B.area) >= -1e-9,
+    check: "二つの周と面積を比べる" },
+  { id: "R2", scope: "pair", hidden: true, text: "相似な三角形なら、面積の比は 周の比の2乗 になる",
+    applies: q => q.sim,
+    holds: q => { const r = q.A.perim / q.B.perim; return Math.abs(q.A.area / q.B.area - r * r) < 0.02 * r * r; },
+    check: "面積の比と周の比をそれぞれ計算" },
+  { id: "N3", scope: "global", naive: true, revise: "R3", text: "交点の数は いつも 線の本数 − 1 になる",
+    applies: a => a.segs.length >= 2,
+    holds: a => a.X.length === a.segs.length - 1,
+    key: a => "x:" + a.segs.length + ":" + a.X.length, check: "交点を数える" },
+  { id: "R3", scope: "global", hidden: true, text: "交点の数は 線の本数×(線の本数−1)÷2 を超えない",
+    applies: a => a.segs.length >= 2,
+    holds: a => a.X.length <= a.segs.length * (a.segs.length - 1) / 2,
+    key: a => "x:" + a.segs.length + ":" + a.X.length, check: "交点を数える" },
+];
+let R = {};
+function initRules() { R = {}; RULE_DEFS.forEach(d => R[d.id] = { status: "none", hits: 0, misses: 0, born: null, seen: [] }); }
+
+function instancesFor(def, a) {
+  if (def.scope === "poly") return a.polys.filter(def.applies).map(p => ({ k: p.key, obj: p }));
+  if (def.scope === "pair") return a.pairs.filter(def.applies).map(q => ({ k: [q.A.key, q.B.key].sort().join("|"), obj: q }));
+  if (def.applies(a)) return [{ k: def.key(a), obj: a }];
+  return [];
+}
+
+function runRules(a) {
+  const events = [];
+  for (const def of RULE_DEFS) {
+    const st = R[def.id];
+    if (st.status === "broken") continue;
+    if (def.hidden && st.status === "none") continue;
+    for (const inst of instancesFor(def, a)) {
+      if (st.seen.includes(inst.k)) continue;
+      st.seen.push(inst.k); if (st.seen.length > 400) st.seen.shift();
+      const ok = def.holds(inst.obj);
+      if (st.status === "none") {
+        if (ok) { st.status = "live"; st.born = SPACE.step; events.push({ t: "bear", def }); }
+        continue;
+      }
+      if (ok) { st.hits++; events.push({ t: "hit", def, n: st.hits }); }
+      else {
+        st.misses++; st.status = "broken"; st.brokenAt = SPACE.step;
+        events.push({ t: "miss", def });
+        if (def.revise) {
+          const rv = R[def.revise]; rv.status = "live"; rv.born = SPACE.step; st.revisedTo = def.revise;
+          events.push({ t: "rev", def: RULE_DEFS.find(d => d.id === def.revise), from: def });
+        }
+        break;
+      }
+    }
+  }
+  return events;
+}
+
+/* ================= 変化のたびに ================= */
+let prevKeys = new Set();
+function changed() {
+  const r = runReaders();
+  lastFindings = r.findings;
+  lastRejected = r.rejected;
+  const events = [];
+  for (const f of r.findings) {
+    const kk = f.key || (f.reader + ":" + f.type);
+    if (prevKeys.has(kk)) continue;
+    const kindKey = f.reader + ":" + (f.type || "");
+    const first = !seenKinds[kindKey];
+    seenKinds[kindKey] = (seenKinds[kindKey] || 0) + 1;
+    events.push({ t: "fact", f, first, kindKey });
+  }
+  prevKeys = new Set(r.findings.map(f => f.key || (f.reader + ":" + f.type)));
+  const a = buildAnalysis(r.findings);
+  const rev = runRules(a);
+  for (const e of events) if (e.first) addLog("new", "新しい発見：" + (e.f.title || e.f.type), e.f.basis || "");
+  for (const e of rev) {
+    if (e.t === "bear") addLog("bear", "予想を立てた：" + e.def.text, "確かめ方：" + e.def.check);
+    if (e.t === "hit" && [1, 5, 10, 25, 50, 100, 250].includes(e.n)) addLog("hit", `当たり ${e.n} 回目：${e.def.text}`, "");
+    if (e.t === "miss") addLog("miss", "外れた：" + e.def.text, "反例が描かれたので、この規則は捨てる");
+    if (e.t === "rev") addLog("rev", "直した：" + e.def.text, `「${e.from.text}」の外れから、成り立つ範囲を絞り直した`);
+  }
+  renderPanels(); save();
+}
+function addLog(k, text, why) {
+  const d = new Date();
+  const t = `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  LOG.push({ k, text, why, step: SPACE.step, t });
+  if (LOG.length > 500) LOG.shift();
+}
+
+/* ================= 表示 ================= */
+const FAM_COL = {
+  "polygon:triangle": "#4fc3ff", "polygon:quad": "#5dffa8", "polygon:ngon": "#c79bff",
+  "intersection": "#ff7ab6",
+  "relation:parallel": "#ffe27a", "relation:perpendicular": "#ffe27a", "collinear": "#ffe27a",
+  "similarity": "#ffb84f", "congruence": "#ffb84f", "euler": "#ffb84f"
+};
+function famOf(type) {
+  if (!type) return "";
+  if (type.startsWith("polygon:triangle")) return "polygon:triangle";
+  if (type.startsWith("polygon:quad")) return "polygon:quad";
+  if (type.startsWith("polygon:")) return "polygon:ngon";
+  return type;
+}
+function tagOf(fam) {
+  return ({ "polygon:triangle": "三角形", "polygon:quad": "四角形", "polygon:ngon": "多角形",
+    "intersection": "交点", "relation:parallel": "平行", "relation:perpendicular": "垂直",
+    "collinear": "一直線", "similarity": "相似", "congruence": "合同", "euler": "一筆書き" })[fam] || fam;
+}
+
+function renderPanels() {
+  const F = $("facts");
+  if (!lastFindings.length) {
+    F.innerHTML = '<div class="empty">線をドラッグして描いてみてください。読み手が形を読み、確かめた発見だけが並びます。</div>';
+  } else {
+    const orderIdx = { "polygon:triangle": 0, "polygon:quad": 1, "polygon:ngon": 2, "relation:parallel": 3, "relation:perpendicular": 3, "collinear": 4, "intersection": 5, "similarity": 6, "congruence": 6, "euler": 7 };
+    const list = [...lastFindings].sort((a, b) => (orderIdx[famOf(a.type)] || 9) - (orderIdx[famOf(b.type)] || 9));
+    F.innerHTML = list.slice(0, 80).map(f => {
+      const fam = famOf(f.type), col = FAM_COL[fam] || "#fff";
+      return `<div class="fact"><span class="tag" style="color:${col};border-color:${col}55">${tagOf(fam)}</span>${f.title}<span class="cert">${f.certainty || ""}</span><div class="why">根拠：${f.basis || ""}　／ 確かめ方：${f.method || ""}</div></div>`;
+    }).join("");
+  }
+  $("factCount").textContent = lastFindings.length ? `${lastFindings.length} 件` : "";
+
+  const shown = RULE_DEFS.filter(d => R[d.id] && R[d.id].status !== "none");
+  $("rules").innerHTML = shown.length ? shown.map(d => {
+    const st = R[d.id];
+    const cls = st.status === "broken" ? "ng" : st.hits >= 3 ? "ok" : "";
+    const lab = st.status === "broken" ? `<span class="k-miss">外れ → ${st.revisedTo ? "修正版へ" : "破棄"}</span>` :
+      st.hits >= 3 ? `<span class="k-hit">当たり続け</span>` : `<span class="k-bear">予想中</span>`;
+    return `<div class="rule ${cls}"><span class="st">${lab}</span><div class="txt">${d.text}</div>
+      <div class="meta">当たり ${st.hits} ・ 外れ ${st.misses} ・ ${st.born}手目に立てた${d.hidden ? "（修正版）" : ""}${st.status === "broken" ? ` ・ ${st.brokenAt}手目に反例` : ""}<br>確かめ方：${d.check}</div></div>`;
+  }).join("") : '<div class="empty">まだ予想はありません。形を描くと、空間が自分で予想を立て始めます。</div>';
+  $("ruleCount").textContent = shown.length ? `${shown.filter(d => R[d.id].status === "live").length} 生存 / ${shown.length}` : "";
+
+  $("readers").innerHTML = READERS.map(R => `<div class="r"><b>${R.id}</b> <span class="meta">v${R.version} ・ 受け付け: ${R.accepts.join("・")}</span></div>`).join("");
+  $("readerCount").textContent = READERS.length + " 名";
+
+  $("log").innerHTML = LOG.length ? LOG.slice().reverse().slice(0, 120).map(l =>
+    `<div><span class="k-${l.k}">${l.t} #${l.step}</span> ${l.text}${l.why ? `<br><span style="color:var(--dim)">　${l.why}</span>` : ""}</div>`).join("")
+    : '<div class="empty">まだありません</div>';
+}
+
+/* ================= 保存 ================= */
+function save() {
+  try { localStorage.setItem("kuukan-kijutsu-v02", JSON.stringify({ SPACE, nextId, seenKinds, LOG, snap, R })); } catch (e) { }
+}
+function load() {
+  initRules();
+  try {
+    const d = JSON.parse(localStorage.getItem("kuukan-kijutsu-v02") || "null");
+    if (d) {
+      SPACE = d.SPACE || SPACE; nextId = d.nextId || nextId;
+      seenKinds = d.seenKinds || {}; LOG = d.LOG || []; snap = d.snap !== false;
+      if (d.R) for (const k in d.R) if (R[k]) Object.assign(R[k], d.R[k]);
+      $("snapBtn").classList.toggle("on", snap);
+    }
+  } catch (e) { }
+}
+$("resetMem").onclick = () => { initRules(); seenKinds = {}; LOG = []; prevKeys = new Set(); changed(); };
+
+/* ================= ボット ================= */
+const SHAPES = [
+  [[0, 0], [4, 0], [0, 3]],
+  [[0, 0], [3, 0], [3, 3], [0, 3]],
+  [[0, 0], [5, 0], [5, 2], [0, 2]],
+  [[0, 0], [3, 1], [4, 4], [1, 3]],
+  [[0, 0], [2, 1], [1, 3], [-1, 2]],
+  [[0, 0], [4, 0], [5, 2], [1, 2]],
+  [[0, 0], [5, 0], [4, 2], [1, 2]],
+  [[0, 0], [4, 0], [2, 3]],
+  [[0, 0], [5, 1], [1, 3]],
+  [[0, 0], [8, 0], [0, 6]]
+];
+let botQueue = [];
+function botPlan() {
+  const cols = Math.floor(W / GRID) - 2, rows = Math.floor(H / GRID) - 2;
+  const sh = SHAPES[Math.floor(Math.random() * SHAPES.length)];
+  const flip = Math.random() < .5 ? -1 : 1;
+  const pts = sh.map(([x, y]) => ({ x: x * flip, y }));
+  const minX = Math.min(...pts.map(p => p.x)), maxX = Math.max(...pts.map(p => p.x)), maxY = Math.max(...pts.map(p => p.y));
+  const ox = 1 + Math.floor(Math.random() * Math.max(1, cols - (maxX - minX))) - minX;
+  const oy = 1 + Math.floor(Math.random() * Math.max(1, rows - maxY - 1));
+  const P = pts.map(p => ({ x: p.x + ox, y: p.y + oy }));
+  return P.map((p, i) => [p, P[(i + 1) % P.length]]);
+}
+function botStep() {
+  ensureAudio();
+  if (!botQueue.length) {
+    if (getSegments().length > 40) {
+      pushUndo(); SPACE.shapes = []; SPACE.step++; changed();
+      addLog("new", "ボット：空間を片付けた", ""); return;
+    }
+    botQueue = botPlan();
+  }
+  const [p, q] = botQueue.shift();
+  const wasSnap = snap; snap = true;
+  pushUndo(); if (addSeg(p, q)) { SPACE.step++; sfx(440, .05, "sine", .03); changed(); } else undoStack.pop();
+  snap = wasSnap;
+}
+$("botBtn").onclick = botStep;
+
+/* ================= 描画 ================= */
+function render() {
+  ctx.fillStyle = "#020308"; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = snap ? "rgba(120,140,190,.22)" : "rgba(120,140,190,.08)";
+  for (let x = GRID; x < W; x += GRID) for (let y = GRID; y < H; y += GRID) ctx.fillRect(x - .75, y - .75, 1.5, 1.5);
+  for (const f of lastFindings) {
+    if (f.type && f.type.startsWith("polygon:")) {
+      const fam = famOf(f.type), col = FAM_COL[fam] || "#fff";
+      const pts = f.value.vertex_ids_ordered.map(id => getPoints().find(p => p.id === id)).filter(Boolean);
+      if (pts.length === f.value.vertex_ids_ordered.length) {
+        ctx.fillStyle = col + "16";
+        ctx.beginPath();
+        pts.forEach((p, i) => { const q = gridToPx(p.x, p.y); if (i === 0) ctx.moveTo(q.x, q.y); else ctx.lineTo(q.x, q.y); });
+        ctx.closePath(); ctx.fill();
+      }
+    }
+  }
+  ctx.lineCap = "round";
+  for (const s of getSegments()) {
+    const A = getPoints().find(p => p.id === s.a), B = getPoints().find(p => p.id === s.b);
+    if (!A || !B) continue;
+    const a = gridToPx(A.x, A.y), b = gridToPx(B.x, B.y);
+    ctx.strokeStyle = "rgba(207,224,255,.9)"; ctx.lineWidth = 2;
+    ctx.shadowColor = "#8fb4ff"; ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+  }
+  ctx.shadowBlur = 0;
+  for (const f of lastFindings) {
+    if (f.type === "intersection") {
+      const q = gridToPx(f.value.x, f.value.y);
+      ctx.fillStyle = "#ff7ab6";
+      ctx.beginPath(); ctx.arc(q.x, q.y, 3.5, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  for (const p of getPoints()) {
+    const q = gridToPx(p.x, p.y);
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.arc(q.x, q.y, 3.6, 0, Math.PI * 2); ctx.fill();
+  }
+  if (drag) {
+    const a = gridToPx(drag.from.x, drag.from.y), b = gridToPx(drag.to.x, drag.to.y);
+    ctx.strokeStyle = "rgba(255,226,122,.8)"; ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke(); ctx.setLineDash([]);
+    const dLen = Math.hypot(drag.from.x - drag.to.x, drag.from.y - drag.to.y);
+    ctx.fillStyle = "#ffe27a"; ctx.font = "11px ui-monospace,monospace";
+    ctx.fillText(`長さ ${Math.round(dLen * 100) / 100}`, b.x + 8, b.y - 8);
+  } else if (hover && tool !== "erase") {
+    const q = gridToPx(hover.x, hover.y);
+    ctx.strokeStyle = "rgba(255,255,255,.25)";
+    ctx.beginPath(); ctx.arc(q.x, q.y, 6, 0, Math.PI * 2); ctx.stroke();
+  }
+  $("hud").innerHTML = `点 <b>${getPoints().length}</b>　線 <b>${getSegments().length}</b>　${SPACE.step} 手目　｜　読み手 <b>${READERS.length}</b>（${READERS.map(r => r.id).join(", ")}）`;
+}
+function tick() { render(); requestAnimationFrame(tick); }
+
+/* ================= 音 ================= */
+let AC = null, sfxOn = true, bgmOn = false, bgm = [];
+function ensureAudio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { } } if (AC && AC.state === "suspended") AC.resume(); }
+function sfx(f, d, type, vol) {
+  type = type || "sine"; vol = vol || .04;
+  if (!sfxOn || !AC) return;
+  const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+  o.type = type; o.frequency.setValueAtTime(f, t); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + d + .12);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + .15);
+}
+function startBGM() {
+  ensureAudio(); if (!AC) return;
+  const m = AC.createGain(); m.gain.value = .022; m.connect(AC.destination);
+  const notes = [130.8, 196, 246.9, 329.6];
+  notes.forEach((f, i) => {
+    const o = AC.createOscillator(), g = AC.createGain(), l = AC.createOscillator(), lg = AC.createGain();
+    o.type = "sine"; o.frequency.value = f; l.frequency.value = .04 + i * .025; lg.gain.value = .45; g.gain.value = .5;
+    l.connect(lg).connect(g.gain); o.connect(g).connect(m); o.start(); l.start(); bgm.push(o, l);
+  });
+  bgm.push({ stop() { m.disconnect(); } });
+}
+function stopBGM() { bgm.forEach(n => { try { n.stop(); } catch (e) { } }); bgm = []; }
+$("bgmBtn").onclick = () => { bgmOn = !bgmOn; bgmOn ? startBGM() : stopBGM(); $("bgmBtn").textContent = "BGM: " + (bgmOn ? "ON" : "OFF"); };
+$("sfxBtn").onclick = () => { sfxOn = !sfxOn; $("sfxBtn").textContent = "効果音: " + (sfxOn ? "ON" : "OFF"); };
+
+/* ================= 起動 ================= */
+resize(); load();
+changed();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>

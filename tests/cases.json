@@ -1,0 +1,305 @@
+{
+  "schema_note": "各ケースの space は kuukan/0.2 形式。座標はマス単位・y 上向き。",
+  "cases": [
+    {
+      "name": "right-triangle-345",
+      "description": "直角三角形 3-4-5",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 4, "y": 0},
+          {"id": 3, "kind": "point", "x": 0, "y": 3},
+          {"id": 4, "kind": "segment", "a": 1, "b": 2},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3},
+          {"id": 6, "kind": "segment", "a": 3, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "iso-right-triangle",
+      "description": "直角二等辺三角形",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 3, "y": 0},
+          {"id": 3, "kind": "point", "x": 0, "y": 3},
+          {"id": 4, "kind": "segment", "a": 1, "b": 2},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3},
+          {"id": 6, "kind": "segment", "a": 3, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "isosceles-triangle",
+      "description": "二等辺三角形（直角でない）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 4, "y": 0},
+          {"id": 3, "kind": "point", "x": 2, "y": 3},
+          {"id": 4, "kind": "segment", "a": 1, "b": 2},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3},
+          {"id": 6, "kind": "segment", "a": 3, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "acute-triangle",
+      "description": "鋭角三角形（不等辺）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 6, "y": 0},
+          {"id": 3, "kind": "point", "x": 2, "y": 5},
+          {"id": 4, "kind": "segment", "a": 1, "b": 2},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3},
+          {"id": 6, "kind": "segment", "a": 3, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "obtuse-triangle",
+      "description": "鈍角三角形",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 6, "y": 0},
+          {"id": 3, "kind": "point", "x": 1, "y": 1},
+          {"id": 4, "kind": "segment", "a": 1, "b": 2},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3},
+          {"id": 6, "kind": "segment", "a": 3, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "square",
+      "description": "正方形",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 3, "y": 0},
+          {"id": 3, "kind": "point", "x": 3, "y": 3},
+          {"id": 4, "kind": "point", "x": 0, "y": 3},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4},
+          {"id": 8, "kind": "segment", "a": 4, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "rectangle",
+      "description": "長方形",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 5, "y": 0},
+          {"id": 3, "kind": "point", "x": 5, "y": 2},
+          {"id": 4, "kind": "point", "x": 0, "y": 2},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4},
+          {"id": 8, "kind": "segment", "a": 4, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "rhombus",
+      "description": "ひし形（4辺等長・対角線が直角）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 3, "y": 1},
+          {"id": 3, "kind": "point", "x": 4, "y": 4},
+          {"id": 4, "kind": "point", "x": 1, "y": 3},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4},
+          {"id": 8, "kind": "segment", "a": 4, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "parallelogram",
+      "description": "平行四辺形（長方形でない）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 4, "y": 0},
+          {"id": 3, "kind": "point", "x": 5, "y": 2},
+          {"id": 4, "kind": "point", "x": 1, "y": 2},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4},
+          {"id": 8, "kind": "segment", "a": 4, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "trapezoid",
+      "description": "台形",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 5, "y": 0},
+          {"id": 3, "kind": "point", "x": 4, "y": 2},
+          {"id": 4, "kind": "point", "x": 1, "y": 2},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4},
+          {"id": 8, "kind": "segment", "a": 4, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "kite",
+      "description": "たこ形（隣り合う辺が2対ずつ等しい）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 3, "y": 0},
+          {"id": 2, "kind": "point", "x": 6, "y": 2},
+          {"id": 3, "kind": "point", "x": 3, "y": 6},
+          {"id": 4, "kind": "point", "x": 0, "y": 2},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4},
+          {"id": 8, "kind": "segment", "a": 4, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "concave-quad",
+      "description": "凹四角形",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 4, "y": 0},
+          {"id": 3, "kind": "point", "x": 2, "y": 1},
+          {"id": 4, "kind": "point", "x": 0, "y": 4},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4},
+          {"id": 8, "kind": "segment", "a": 4, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "parallel-perp-collinear",
+      "description": "平行・垂直・一直線上を同時に含む",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 2, "y": 0},
+          {"id": 3, "kind": "point", "x": 5, "y": 0},
+          {"id": 4, "kind": "point", "x": 0, "y": 2},
+          {"id": 5, "kind": "point", "x": 5, "y": 2},
+          {"id": 6, "kind": "point", "x": 8, "y": 0},
+          {"id": 7, "kind": "point", "x": 8, "y": 3},
+          {"id": 8, "kind": "segment", "a": 1, "b": 3},
+          {"id": 9, "kind": "segment", "a": 4, "b": 5},
+          {"id": 10, "kind": "segment", "a": 6, "b": 7}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "similar-triangles",
+      "description": "相似な直角三角形（3-4-5 と 6-8-10）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 4, "y": 0},
+          {"id": 3, "kind": "point", "x": 0, "y": 3},
+          {"id": 4, "kind": "point", "x": 7, "y": 0},
+          {"id": 5, "kind": "point", "x": 15, "y": 0},
+          {"id": 6, "kind": "point", "x": 7, "y": 6},
+          {"id": 7, "kind": "segment", "a": 1, "b": 2},
+          {"id": 8, "kind": "segment", "a": 2, "b": 3},
+          {"id": 9, "kind": "segment", "a": 3, "b": 1},
+          {"id": 10, "kind": "segment", "a": 4, "b": 5},
+          {"id": 11, "kind": "segment", "a": 5, "b": 6},
+          {"id": 12, "kind": "segment", "a": 6, "b": 4}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "euler-possible",
+      "description": "一筆書きできる（連結・奇数次 2）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 2, "y": 0},
+          {"id": 3, "kind": "point", "x": 4, "y": 2},
+          {"id": 4, "kind": "point", "x": 6, "y": 0},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "euler-impossible",
+      "description": "一筆書きできない（非連結）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 3, "y": 0},
+          {"id": 3, "kind": "point", "x": 0, "y": 3},
+          {"id": 4, "kind": "point", "x": 6, "y": 0},
+          {"id": 5, "kind": "point", "x": 8, "y": 2},
+          {"id": 6, "kind": "segment", "a": 1, "b": 2},
+          {"id": 7, "kind": "segment", "a": 2, "b": 3},
+          {"id": 8, "kind": "segment", "a": 3, "b": 1},
+          {"id": 9, "kind": "segment", "a": 4, "b": 5}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    }
+  ]
+}

@@ -1,0 +1,916 @@
+{
+  "right-triangle-345": {
+    "description": "直角三角形 3-4-5",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "直角三角形",
+        "refs": [
+          1,
+          2,
+          3
+        ],
+        "metrics": {
+          "n": 3,
+          "area": 6,
+          "perim": 12,
+          "sides_sorted": [
+            3,
+            4,
+            5
+          ],
+          "angleSum": 180,
+          "convex": true
+        }
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "1-3"
+        ]
+      }
+    ]
+  },
+  "iso-right-triangle": {
+    "description": "直角二等辺三角形",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "直角二等辺三角形",
+        "refs": [
+          1,
+          2,
+          3
+        ],
+        "metrics": {
+          "n": 3,
+          "area": 4.5,
+          "perim": 10.2426,
+          "sides_sorted": [
+            3,
+            3,
+            4.2426
+          ],
+          "angleSum": 180,
+          "convex": true
+        }
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "1-3"
+        ]
+      }
+    ]
+  },
+  "isosceles-triangle": {
+    "description": "二等辺三角形（直角でない）",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "二等辺三角形",
+        "refs": [
+          1,
+          2,
+          3
+        ],
+        "metrics": {
+          "n": 3,
+          "area": 6,
+          "perim": 11.2111,
+          "sides_sorted": [
+            3.6056,
+            3.6056,
+            4
+          ],
+          "angleSum": 180,
+          "convex": true
+        }
+      }
+    ]
+  },
+  "acute-triangle": {
+    "description": "鋭角三角形（不等辺）",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "鋭角三角形",
+        "refs": [
+          1,
+          2,
+          3
+        ],
+        "metrics": {
+          "n": 3,
+          "area": 15,
+          "perim": 17.7883,
+          "sides_sorted": [
+            5.3852,
+            6,
+            6.4031
+          ],
+          "angleSum": 180,
+          "convex": true
+        }
+      }
+    ]
+  },
+  "obtuse-triangle": {
+    "description": "鈍角三角形",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "鈍角三角形",
+        "refs": [
+          1,
+          2,
+          3
+        ],
+        "metrics": {
+          "n": 3,
+          "area": 3,
+          "perim": 12.5132,
+          "sides_sorted": [
+            1.4142,
+            5.099,
+            6
+          ],
+          "angleSum": 180,
+          "convex": true
+        }
+      }
+    ]
+  },
+  "square": {
+    "description": "正方形",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "正方形",
+        "refs": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "metrics": {
+          "n": 4,
+          "area": 9,
+          "perim": 12,
+          "sides_sorted": [
+            3,
+            3,
+            3,
+            3
+          ],
+          "angleSum": 360,
+          "convex": true
+        }
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-2",
+          "3-4"
+        ]
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-4",
+          "2-3"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "1-4"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "2-3"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-4",
+          "3-4"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "2-3",
+          "3-4"
+        ]
+      }
+    ]
+  },
+  "rectangle": {
+    "description": "長方形",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "長方形",
+        "refs": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "metrics": {
+          "n": 4,
+          "area": 10,
+          "perim": 14,
+          "sides_sorted": [
+            2,
+            2,
+            5,
+            5
+          ],
+          "angleSum": 360,
+          "convex": true
+        }
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-2",
+          "3-4"
+        ]
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-4",
+          "2-3"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "1-4"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "2-3"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-4",
+          "3-4"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "2-3",
+          "3-4"
+        ]
+      }
+    ]
+  },
+  "rhombus": {
+    "description": "ひし形（4辺等長・対角線が直角）",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "ひし形",
+        "refs": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "metrics": {
+          "n": 4,
+          "area": 8,
+          "perim": 12.6491,
+          "sides_sorted": [
+            3.1623,
+            3.1623,
+            3.1623,
+            3.1623
+          ],
+          "angleSum": 360,
+          "convex": true
+        }
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-2",
+          "3-4"
+        ]
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-4",
+          "2-3"
+        ]
+      }
+    ]
+  },
+  "parallelogram": {
+    "description": "平行四辺形（長方形でない）",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "平行四辺形",
+        "refs": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "metrics": {
+          "n": 4,
+          "area": 8,
+          "perim": 12.4721,
+          "sides_sorted": [
+            2.2361,
+            2.2361,
+            4,
+            4
+          ],
+          "angleSum": 360,
+          "convex": true
+        }
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-2",
+          "3-4"
+        ]
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-4",
+          "2-3"
+        ]
+      }
+    ]
+  },
+  "trapezoid": {
+    "description": "台形",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "台形",
+        "refs": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "metrics": {
+          "n": 4,
+          "area": 8,
+          "perim": 12.4721,
+          "sides_sorted": [
+            2.2361,
+            2.2361,
+            3,
+            5
+          ],
+          "angleSum": 360,
+          "convex": true
+        }
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-2",
+          "3-4"
+        ]
+      }
+    ]
+  },
+  "kite": {
+    "description": "たこ形（隣り合う辺が2対ずつ等しい）",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "たこ形",
+        "refs": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "metrics": {
+          "n": 4,
+          "area": 18,
+          "perim": 17.2111,
+          "sides_sorted": [
+            3.6056,
+            3.6056,
+            5,
+            5
+          ],
+          "angleSum": 360,
+          "convex": true
+        }
+      }
+    ]
+  },
+  "concave-quad": {
+    "description": "凹四角形",
+    "findings": [
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "凹四角形",
+        "refs": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "metrics": {
+          "n": 4,
+          "area": 6,
+          "perim": 13.8416,
+          "sides_sorted": [
+            2.2361,
+            3.6056,
+            4,
+            4
+          ],
+          "angleSum": 360,
+          "convex": false
+        }
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "1-4"
+        ]
+      }
+    ]
+  },
+  "parallel-perp-collinear": {
+    "description": "平行・垂直・一直線上を同時に含む",
+    "findings": [
+      {
+        "category": "collinear",
+        "type": "一直線上",
+        "refs": [
+          1,
+          2,
+          3,
+          6
+        ]
+      },
+      {
+        "category": "euler",
+        "type": "不可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": false,
+          "odd": 6,
+          "brute": false
+        }
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-3",
+          "4-5"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-3",
+          "6-7"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "4-5",
+          "6-7"
+        ]
+      }
+    ]
+  },
+  "similar-triangles": {
+    "description": "相似な直角三角形（3-4-5 と 6-8-10）",
+    "findings": [
+      {
+        "category": "collinear",
+        "type": "一直線上",
+        "refs": [
+          1,
+          2,
+          4,
+          5
+        ]
+      },
+      {
+        "category": "euler",
+        "type": "不可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": false,
+          "odd": 0,
+          "brute": false
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "直角三角形",
+        "refs": [
+          1,
+          2,
+          3
+        ],
+        "metrics": {
+          "n": 3,
+          "area": 6,
+          "perim": 12,
+          "sides_sorted": [
+            3,
+            4,
+            5
+          ],
+          "angleSum": 180,
+          "convex": true
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "直角三角形",
+        "refs": [
+          4,
+          5,
+          6
+        ],
+        "metrics": {
+          "n": 3,
+          "area": 24,
+          "perim": 24,
+          "sides_sorted": [
+            6,
+            8,
+            10
+          ],
+          "angleSum": 180,
+          "convex": true
+        }
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "1-3",
+          "4-6"
+        ]
+      },
+      {
+        "category": "relation:parallel",
+        "type": "平行",
+        "refs": [
+          "2-3",
+          "5-6"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "1-3"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "4-6"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-3",
+          "4-5"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "4-5",
+          "4-6"
+        ]
+      },
+      {
+        "category": "similarity",
+        "type": "相似",
+        "refs": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4,
+            5,
+            6
+          ]
+        ],
+        "metrics": {
+          "ratio": 2
+        }
+      }
+    ]
+  },
+  "euler-possible": {
+    "description": "一筆書きできる（連結・奇数次 2）",
+    "findings": [
+      {
+        "category": "collinear",
+        "type": "一直線上",
+        "refs": [
+          1,
+          2,
+          4
+        ]
+      },
+      {
+        "category": "euler",
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": true,
+          "odd": 2,
+          "brute": true
+        }
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "2-3",
+          "3-4"
+        ]
+      }
+    ]
+  },
+  "euler-impossible": {
+    "description": "一筆書きできない（非連結）",
+    "findings": [
+      {
+        "category": "collinear",
+        "type": "一直線上",
+        "refs": [
+          1,
+          2,
+          4
+        ]
+      },
+      {
+        "category": "euler",
+        "type": "不可",
+        "refs": [
+          "global"
+        ],
+        "metrics": {
+          "connected": false,
+          "odd": 2,
+          "brute": false
+        }
+      },
+      {
+        "category": "polygon",
+        "type": "直角二等辺三角形",
+        "refs": [
+          1,
+          2,
+          3
+        ],
+        "metrics": {
+          "n": 3,
+          "area": 4.5,
+          "perim": 10.2426,
+          "sides_sorted": [
+            3,
+            3,
+            4.2426
+          ],
+          "angleSum": 180,
+          "convex": true
+        }
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "1-3"
+        ]
+      },
+      {
+        "category": "relation:perpendicular",
+        "type": "垂直",
+        "refs": [
+          "2-3",
+          "4-5"
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,162 @@
+{
+  "right-triangle-345": {
+    "description": "直角三角形 3-4-5",
+    "v01_count": 3,
+    "v02_count": 3,
+    "matched": 3,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "iso-right-triangle": {
+    "description": "直角二等辺三角形",
+    "v01_count": 3,
+    "v02_count": 3,
+    "matched": 3,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "isosceles-triangle": {
+    "description": "二等辺三角形（直角でない）",
+    "v01_count": 2,
+    "v02_count": 2,
+    "matched": 2,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "acute-triangle": {
+    "description": "鋭角三角形（不等辺）",
+    "v01_count": 2,
+    "v02_count": 2,
+    "matched": 2,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "obtuse-triangle": {
+    "description": "鈍角三角形",
+    "v01_count": 2,
+    "v02_count": 2,
+    "matched": 2,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "square": {
+    "description": "正方形",
+    "v01_count": 8,
+    "v02_count": 8,
+    "matched": 8,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "rectangle": {
+    "description": "長方形",
+    "v01_count": 8,
+    "v02_count": 8,
+    "matched": 8,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "rhombus": {
+    "description": "ひし形（4辺等長・対角線が直角）",
+    "v01_count": 4,
+    "v02_count": 4,
+    "matched": 4,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "parallelogram": {
+    "description": "平行四辺形（長方形でない）",
+    "v01_count": 4,
+    "v02_count": 4,
+    "matched": 4,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "trapezoid": {
+    "description": "台形",
+    "v01_count": 3,
+    "v02_count": 3,
+    "matched": 3,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "kite": {
+    "description": "たこ形（隣り合う辺が2対ずつ等しい）",
+    "v01_count": 2,
+    "v02_count": 2,
+    "matched": 2,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "concave-quad": {
+    "description": "凹四角形",
+    "v01_count": 3,
+    "v02_count": 3,
+    "matched": 3,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "parallel-perp-collinear": {
+    "description": "平行・垂直・一直線上を同時に含む",
+    "v01_count": 5,
+    "v02_count": 5,
+    "matched": 5,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "similar-triangles": {
+    "description": "相似な直角三角形（3-4-5 と 6-8-10）",
+    "v01_count": 11,
+    "v02_count": 11,
+    "matched": 11,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "euler-possible": {
+    "description": "一筆書きできる（連結・奇数次 2）",
+    "v01_count": 3,
+    "v02_count": 3,
+    "matched": 3,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  },
+  "euler-impossible": {
+    "description": "一筆書きできない（非連結）",
+    "v01_count": 5,
+    "v02_count": 5,
+    "matched": 5,
+    "only_in_v01": [],
+    "only_in_v02": [],
+    "metrics_diff": [],
+    "rejected_by_check": []
+  }
+}
