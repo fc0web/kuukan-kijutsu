@@ -157,5 +157,33 @@
       "method": "内心を辺長加重重心から、内半径を 面積/半周 から独立に算出して照合",
       "expected": "pass:false（間違った発見は check で落ちるべき）"
     }
-  ]
+  ],
+  "reader_settings": {
+    "description": "読み手は図のマス目吸着を見て許容を切り替える。札「厳密／許容内」は、確かめ役がどちらの基準で確かめるかを選ぶ。",
+    "tolerance": {
+      "snap": {
+        "TOL": 0.000001,
+        "ANG_deg": 0.05,
+        "note": "整数座標・半径 0.5 刻みのとき「厳密」。ほぼ 0 まで厳しく判定"
+      },
+      "nonsnap": {
+        "TOL": 0.02,
+        "ANG_deg": 1.5,
+        "note": "そうでないとき「許容内」。長さは 2％・角度は 1.5° まで許す"
+      }
+    },
+    "byFinding": {
+      "polygon": "辺長：TOL 相対／角度：ANG 絶対",
+      "intersection": "両端点から 1e-6 以上内側のとき交わると判定",
+      "relation:parallel": "方向ベクトルの角度差 < ANG",
+      "relation:perpendicular": "方向ベクトルの角度差と 90° との差 < ANG",
+      "collinear": "直線からの距離 < 2 点間距離の 1％（非スナップ時）",
+      "similarity/congruence": "辺の比の差 < TOL 相対",
+      "euler": "連結性は厳密。辺 15 本以下なら総当たりで照合、それ以外は推定",
+      "circle:basic": "周・面積は公式（厳密）。check は n=512 内接多角形で 0.1％ 以内",
+      "circle-line": "|d − r| < TOL × max(r, 1)",
+      "circle-circle": "|d − (r1±r2)| < TOL × max(r1+r2, 1)",
+      "circle-triangle": "3 頂点/3 辺への距離の差 < TOL × max(r, 1)"
+    }
+  }
 }

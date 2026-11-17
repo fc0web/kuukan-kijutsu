@@ -133,11 +133,20 @@ for (const c of cases) {
   };
 }
 
+const fullReport = { reader_settings: Reader.settings(), cases: report };
 fs.writeFileSync(outPath, JSON.stringify(answers, null, 2), "utf8");
-fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf8");
+fs.writeFileSync(reportPath, JSON.stringify(fullReport, null, 2), "utf8");
 
 console.log("wrote", outPath);
 console.log("wrote", reportPath);
+console.log("");
+console.log("=== 読み手の設定値（" + Reader.id + " v" + Reader.version + "） ===");
+const cfg = Reader.settings();
+console.log("説明：" + cfg.description);
+console.log("[snap]    TOL=" + cfg.tolerance.snap.TOL + "、ANG=" + cfg.tolerance.snap.ANG_deg + "° ・" + cfg.tolerance.snap.note);
+console.log("[nonsnap] TOL=" + cfg.tolerance.nonsnap.TOL + "、ANG=" + cfg.tolerance.nonsnap.ANG_deg + "° ・" + cfg.tolerance.nonsnap.note);
+console.log("種類ごとの許容：");
+for (const k of Object.keys(cfg.byFinding)) console.log("  " + k + "：" + cfg.byFinding[k]);
 console.log("");
 console.log("=== 円のケース照合 ===");
 console.log("ケース数:", cases.length);

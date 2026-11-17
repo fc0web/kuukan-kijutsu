@@ -484,8 +484,15 @@ const out = {
   outcome
 };
 
+out.reader_settings = Reader.settings();
 fs.writeFileSync(path.join(__dirname, "mutations-result.json"), JSON.stringify(out, null, 2), "utf8");
 
+console.log("=== 読み手の設定値（" + Reader.id + " v" + Reader.version + "） ===");
+const cfg = Reader.settings();
+console.log("説明：" + cfg.description);
+console.log("[snap]    TOL=" + cfg.tolerance.snap.TOL + "、ANG=" + cfg.tolerance.snap.ANG_deg + "° ・" + cfg.tolerance.snap.note);
+console.log("[nonsnap] TOL=" + cfg.tolerance.nonsnap.TOL + "、ANG=" + cfg.tolerance.nonsnap.ANG_deg + "° ・" + cfg.tolerance.nonsnap.note);
+console.log("");
 console.log("=== mutation test ===");
 console.log("わざと間違った発見の数:", out.count);
 console.log("check で落ちた数:", out.rejected_count);

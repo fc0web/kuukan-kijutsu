@@ -240,6 +240,8 @@
     const snap = isSnappedSpace(points, circlesRaw);
     const tol = makeTol(snap);
     const findings = [];
+    // 許容内の発見の basis に添える「使った許容の値」。snap のときは空文字。
+    const tolSuffix = text => snap ? "" : "　／　許容：" + text;
 
     const pointMap = new Map(points.map(p => [p.id, p]));
     const adj = new Map();
@@ -267,7 +269,7 @@
             type: "intersection",
             title: "交点",
             value: { x: rx, y: ry },
-            basis: "2本の線分の式を連立して、両方の内側にある交点を求めた",
+            basis: "2本の線分の式を連立して、両方の内側にある交点を求めた" + tolSuffix("両端点から 1e-6 以上内側"),
             refs: [s.id, t.id].sort((a, b) => a - b),
             certainty: snap ? "厳密" : "許容内"
           });
@@ -304,7 +306,7 @@
               ? Math.abs(angDiff(segAngle(pg.V[0], pg.V[2]), segAngle(pg.V[1], pg.V[3])) - 90) < tol.ANG
               : false
           },
-          basis: "面積は靴ひも公式、角は辺ベクトルの内積から",
+          basis: "面積は靴ひも公式、角は辺ベクトルの内積から" + tolSuffix("辺長の " + (tol.TOL * 100).toFixed(1) + "％、角度 " + tol.ANG + "° 以内"),
           refs: [...pg.ids].sort((a, b) => a - b),
           certainty: snap ? "厳密" : "許容内"
         });
@@ -331,7 +333,7 @@
               type: "relation:parallel",
               title: "平行",
               value: { angleDiff: d },
-              basis: "2本の向きの差が ≈ 0°",
+              basis: "2本の向きの差が ≈ 0°" + tolSuffix("角度 " + tol.ANG + "° 以内"),
               refs: [s.id, t.id].sort((a, b) => a - b),
               certainty: snap ? "厳密" : "許容内"
             });
@@ -345,7 +347,7 @@
             type: "relation:perpendicular",
             title: "垂直",
             value: { angleDiff: d },
-            basis: "2本の向きの差が ≈ 90°",
+            basis: "2本の向きの差が ≈ 90°" + tolSuffix("90° との差 " + tol.ANG + "° 以内"),
             refs: [s.id, t.id].sort((a, b) => a - b),
             certainty: snap ? "厳密" : "許容内"
           });
@@ -371,7 +373,7 @@
               type: "collinear",
               title: on.length + " 点が一直線上",
               value: { count: on.length },
-              basis: "どの2点を選んでも外積がほぼ 0",
+              basis: "どの2点を選んでも外積がほぼ 0" + tolSuffix("直線からの距離が 2 点間距離の 1％ 以内"),
               refs: on.map(r => r.id).sort((a, b) => a - b),
               certainty: snap ? "厳密" : "許容内"
             });
@@ -397,7 +399,7 @@
             type: cong ? "congruence" : "similarity",
             title: cong ? "合同な三角形の組" : "相似な三角形の組",
             value: { ratio: r > 1 ? r : 1 / r },
-            basis: "三辺の長さの比がすべて等しい",
+            basis: "三辺の長さの比がすべて等しい" + tolSuffix("辺の比の差 " + (tol.TOL * 100).toFixed(1) + "％ 以内"),
             refs: pair,
             certainty: snap ? "厳密" : "許容内"
           });
@@ -449,7 +451,7 @@
           circumference: 2 * Math.PI * c.r,
           area: Math.PI * c.r * c.r
         },
-        basis: "周 = 2 × π × 半径、面積 = π × 半径²",
+        basis: "周 = 2 × π × 半径、面積 = π × 半径²" + tolSuffix("半径が 0.5 刻みに吸着していないため許容内（公式自体は厳密）"),
         refs: [c.id],
         certainty: snap ? "厳密" : "許容内"
       });
@@ -480,9 +482,10 @@
                  rel === "intersect" ? "円と線が交わる（交点 2）" :
                  "円と線は離れている",
           value: { distance: distLine, r: c.r },
-          basis: rel === "tangent" ? "中心と直線の距離が半径にほぼ等しい" :
-                 rel === "intersect" ? "中心と直線の距離が半径より小さい" :
-                 "中心と直線の距離が半径より大きい",
+          basis: (rel === "tangent" ? "中心と直線の距離が半径にほぼ等しい" :
+                  rel === "intersect" ? "中心と直線の距離が半径より小さい" :
+                  "中心と直線の距離が半径より大きい")
+                 + tolSuffix("|d − r| < " + epsCL.toFixed(3) + " マス（＝ " + (tol.TOL * 100).toFixed(1) + "％ × max(r, 1)）"),
           refs: [c.id, s.id],
           certainty: snap ? "厳密" : "許容内"
         });
@@ -509,8 +512,8 @@
         const titles = {
           "concentric": "同心円",
           "intersect": "2 円が交わる（交点 2）",
-          "tangent-external": "外接する 2 円",
-          "tangent-internal": "内接する 2 円",
+          "tangent-external": "2 円が外側で接する",
+          "tangent-internal": "2 円が内側で接する",
           "inside": "小さい方の円がもう一方の内側にある",
           "separate": "2 円は離れている"
         };
@@ -520,7 +523,8 @@
           type: "circle-circle:" + rel,
           title: titles[rel] || rel,
           value: { d, r1: c1.r, r2: c2.r, sum: sumR, diff: diffR },
-          basis: "中心間距離 d と、半径の和 r1+r2・差 |r1-r2| を比べて分類",
+          basis: "中心間距離 d と、半径の和 r1+r2・差 |r1-r2| を比べて分類"
+                 + tolSuffix("|d − (r1±r2)| < " + epsCC.toFixed(3) + " マス（＝ " + (tol.TOL * 100).toFixed(1) + "％ × max(r1+r2, 1)）"),
           refs: ids,
           certainty: snap ? "厳密" : "許容内"
         });
@@ -544,7 +548,8 @@
             type: "circle-triangle:circumscribed",
             title: "外接円",
             value: { r: c.r, triangle_ids: triIds },
-            basis: "三角形の 3 頂点がすべて円周上にある",
+            basis: "三角形の 3 頂点がすべて円周上にある"
+                   + tolSuffix("頂点ごとの距離の差 < " + epsCT.toFixed(3) + " マス（＝ " + (tol.TOL * 100).toFixed(1) + "％ × max(r, 1)）"),
             refs: [c.id, triIds],
             certainty: snap ? "厳密" : "許容内"
           });
@@ -568,7 +573,8 @@
             type: "circle-triangle:inscribed",
             title: "内接円",
             value: { r: c.r, triangle_ids: triIds },
-            basis: "三角形の 3 辺の直線すべてに円が接している",
+            basis: "三角形の 3 辺の直線すべてに円が接している"
+                   + tolSuffix("辺ごとの距離の差 < " + epsCT.toFixed(3) + " マス（＝ " + (tol.TOL * 100).toFixed(1) + "％ × max(r, 1)）"),
             refs: [c.id, triIds],
             certainty: snap ? "厳密" : "許容内"
           });
@@ -888,12 +894,36 @@
   }
 
   // --- 読み手オブジェクト ---------------------------------------------
+  function settings() {
+    return {
+      description: "読み手は図のマス目吸着を見て許容を切り替える。札「厳密／許容内」は、確かめ役がどちらの基準で確かめるかを選ぶ。",
+      tolerance: {
+        snap:    { TOL: 1e-6, ANG_deg: 0.05, note: "整数座標・半径 0.5 刻みのとき「厳密」。ほぼ 0 まで厳しく判定" },
+        nonsnap: { TOL: 0.02, ANG_deg: 1.5,  note: "そうでないとき「許容内」。長さは 2％・角度は 1.5° まで許す" }
+      },
+      byFinding: {
+        "polygon": "辺長：TOL 相対／角度：ANG 絶対",
+        "intersection": "両端点から 1e-6 以上内側のとき交わると判定",
+        "relation:parallel":      "方向ベクトルの角度差 < ANG",
+        "relation:perpendicular": "方向ベクトルの角度差と 90° との差 < ANG",
+        "collinear": "直線からの距離 < 2 点間距離の 1％（非スナップ時）",
+        "similarity/congruence": "辺の比の差 < TOL 相対",
+        "euler": "連結性は厳密。辺 15 本以下なら総当たりで照合、それ以外は推定",
+        "circle:basic": "周・面積は公式（厳密）。check は n=512 内接多角形で 0.1％ 以内",
+        "circle-line":     "|d − r| < TOL × max(r, 1)",
+        "circle-circle":   "|d − (r1±r2)| < TOL × max(r1+r2, 1)",
+        "circle-triangle": "3 頂点/3 辺への距離の差 < TOL × max(r, 1)"
+      }
+    };
+  }
+
   const Reader = {
     id: ID,
     version: VERSION,
     accepts: ACCEPTS.slice(),
     read,
-    check
+    check,
+    settings
   };
 
   if (typeof module !== "undefined" && module.exports) {
