@@ -96,6 +96,45 @@ const spaces = {
       { id: 8, kind: "segment", a: 4, b: 1 }
     ],
     step: 0, source: "human"
+  },
+  // ほぼ平行 2° 差（非スナップ・許容外側）: tan(2°)≈0.0349 → 10 × 0.0349 ≈ 0.349
+  nearPar2: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "point", x: 0, y: 0 },
+      { id: 2, kind: "point", x: 10, y: 0 },
+      { id: 3, kind: "point", x: 0, y: 1 },
+      { id: 4, kind: "point", x: 10, y: 1.349 },
+      { id: 5, kind: "segment", a: 1, b: 2 },
+      { id: 6, kind: "segment", a: 3, b: 4 }
+    ],
+    step: 0, source: "human"
+  },
+  // 垂直から 2° ずれた2本（非スナップ・許容外側）
+  nearPerp2: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "point", x: 0, y: 0 },
+      { id: 2, kind: "point", x: 10, y: 0 },        // 水平
+      { id: 3, kind: "point", x: 1, y: 0 },
+      { id: 4, kind: "point", x: 1.349, y: 10 },    // y軸から約 2° 傾いた線
+      { id: 5, kind: "segment", a: 1, b: 2 },
+      { id: 6, kind: "segment", a: 3, b: 4 }
+    ],
+    step: 0, source: "human"
+  },
+  // マス目吸着（厳密）だが約 1° ずれ: 傾き 1/57 → arctan ≈ 1.005°
+  snapNearPar1: {
+    schema: "kuukan/0.2",
+    shapes: [
+      { id: 1, kind: "point", x: 0, y: 0 },
+      { id: 2, kind: "point", x: 57, y: 0 },
+      { id: 3, kind: "point", x: 0, y: 2 },
+      { id: 4, kind: "point", x: 57, y: 3 },
+      { id: 5, kind: "segment", a: 1, b: 2 },
+      { id: 6, kind: "segment", a: 3, b: 4 }
+    ],
+    step: 0, source: "human"
   }
 };
 
@@ -213,6 +252,48 @@ const mutations = [
         allEq: true, right: false, diagPerp: true
       },
       refs: [1, 2, 3, 4], certainty: "厳密"
+    }
+  },
+  {
+    name: "wrong-near-parallel-tolerant-outside",
+    note: "約 2° ずれた2本に「平行・許容内」の札（sin(1.5°) より大きいので check 落ち）",
+    space: spaces.nearPar2,
+    finding: {
+      key: "geometry:relation:parallel:1-2|3-4",
+      reader: "geometry",
+      type: "relation:parallel",
+      title: "平行",
+      value: { angleDiff: 2.0 },
+      basis: "（捏造）",
+      refs: [5, 6], certainty: "許容内"
+    }
+  },
+  {
+    name: "wrong-near-perpendicular-tolerant-outside",
+    note: "約 2° ずれた2本に「垂直・許容内」の札（sin(1.5°) より大きいので check 落ち）",
+    space: spaces.nearPerp2,
+    finding: {
+      key: "geometry:relation:perpendicular:1-2|3-4",
+      reader: "geometry",
+      type: "relation:perpendicular",
+      title: "垂直",
+      value: { angleDiff: 88.0 },
+      basis: "（捏造）",
+      refs: [5, 6], certainty: "許容内"
+    }
+  },
+  {
+    name: "wrong-snap-parallel-strict",
+    note: "厳密な図（マス目吸着）で約 1° ずれた2本に「平行・厳密」の札（厳密基準なので check 落ち）",
+    space: spaces.snapNearPar1,
+    finding: {
+      key: "geometry:relation:parallel:1-2|3-4",
+      reader: "geometry",
+      type: "relation:parallel",
+      title: "平行",
+      value: { angleDiff: 0 },
+      basis: "（捏造）",
+      refs: [5, 6], certainty: "厳密"
     }
   }
 ];

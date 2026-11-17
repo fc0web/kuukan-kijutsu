@@ -489,18 +489,35 @@
       if (!s || !t) return { pass: false, method: "対象の線分が見つからない" };
       const u = sub(pointMap.get(s.b), pointMap.get(s.a));
       const v = sub(pointMap.get(t.b), pointMap.get(t.a));
+      const lu = len(u), lv = len(v);
+      if (lu < 1e-12 || lv < 1e-12) return { pass: false, method: "長さ 0 の線分" };
+      const scale = lu * lv;
+      // 札は「どちらの基準で確かめるか」を選ぶだけ：
+      //   厳密   → ほぼ 0 の許容
+      //   許容内 → 読み手の設定値 ANG_TOL 由来（sin(ANG_TOL)）の許容
+      // 確かめ方は read と別の経路：外積・内積を長さで割って sin θ・cos θ を直接作る。
+      const isStrict = finding.certainty === "厳密";
+      const sinTol = isStrict ? 1e-9 : Math.sin(tol.ANG * Math.PI / 180);
       if (finding.type === "relation:parallel") {
-        // 平行は外積が 0（独立な別の指標）
-        const c = Math.abs(cross(u, v));
-        const scale = len(u) * len(v);
-        const ok = c < 1e-6 * Math.max(1, scale);
-        return { pass: ok, method: "方向ベクトルの外積がほぼ 0 であることで平行を再確認" };
+        // sin θ = |u × v| / (|u| |v|)
+        const sinTheta = Math.abs(cross(u, v)) / scale;
+        const ok = sinTheta <= sinTol + 1e-12;
+        return {
+          pass: ok,
+          method: isStrict
+            ? "方向ベクトルの sin θ がほぼ 0 であることで平行を再確認（厳密）"
+            : "sin θ を sin(" + tol.ANG + "°) と比べた（許容内・ANG_TOL 由来）"
+        };
       } else {
-        // 垂直は内積が 0
-        const d = Math.abs(dot(u, v));
-        const scale = len(u) * len(v);
-        const ok = d < 1e-6 * Math.max(1, scale);
-        return { pass: ok, method: "方向ベクトルの内積がほぼ 0 であることで垂直を再確認" };
+        // cos θ = |u · v| / (|u| |v|) を sin(ANG_TOL) と比べる（90° からの ずれ）
+        const cosTheta = Math.abs(dot(u, v)) / scale;
+        const ok = cosTheta <= sinTol + 1e-12;
+        return {
+          pass: ok,
+          method: isStrict
+            ? "方向ベクトルの cos θ がほぼ 0 であることで垂直を再確認（厳密）"
+            : "cos θ を sin(" + tol.ANG + "°) と比べた（許容内・ANG_TOL 由来）"
+        };
       }
     }
 

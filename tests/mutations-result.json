@@ -1,7 +1,7 @@
 {
-  "count": 7,
+  "count": 10,
   "all_rejected": true,
-  "rejected_count": 7,
+  "rejected_count": 10,
   "passed_through_by_mistake": 0,
   "outcome": [
     {
@@ -19,7 +19,7 @@
       "finding_type": "relation:parallel",
       "finding_title": "平行",
       "check_pass": false,
-      "method": "方向ベクトルの外積がほぼ 0 であることで平行を再確認",
+      "method": "方向ベクトルの sin θ がほぼ 0 であることで平行を再確認（厳密）",
       "expected": "pass:false（間違った発見は check で落ちるべき）"
     },
     {
@@ -28,7 +28,7 @@
       "finding_type": "relation:perpendicular",
       "finding_title": "垂直",
       "check_pass": false,
-      "method": "方向ベクトルの内積がほぼ 0 であることで垂直を再確認",
+      "method": "方向ベクトルの cos θ がほぼ 0 であることで垂直を再確認（厳密）",
       "expected": "pass:false（間違った発見は check で落ちるべき）"
     },
     {
@@ -65,6 +65,33 @@
       "finding_title": "正方形",
       "check_pass": false,
       "method": "靴ひも公式を再計算して面積を照合",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-near-parallel-tolerant-outside",
+      "note": "約 2° ずれた2本に「平行・許容内」の札（sin(1.5°) より大きいので check 落ち）",
+      "finding_type": "relation:parallel",
+      "finding_title": "平行",
+      "check_pass": false,
+      "method": "sin θ を sin(1.5°) と比べた（許容内・ANG_TOL 由来）",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-near-perpendicular-tolerant-outside",
+      "note": "約 2° ずれた2本に「垂直・許容内」の札（sin(1.5°) より大きいので check 落ち）",
+      "finding_type": "relation:perpendicular",
+      "finding_title": "垂直",
+      "check_pass": false,
+      "method": "cos θ を sin(1.5°) と比べた（許容内・ANG_TOL 由来）",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-snap-parallel-strict",
+      "note": "厳密な図（マス目吸着）で約 1° ずれた2本に「平行・厳密」の札（厳密基準なので check 落ち）",
+      "finding_type": "relation:parallel",
+      "finding_title": "平行",
+      "check_pass": false,
+      "method": "方向ベクトルの sin θ がほぼ 0 であることで平行を再確認（厳密）",
       "expected": "pass:false（間違った発見は check で落ちるべき）"
     }
   ]
