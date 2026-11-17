@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>何も無い空間 — 描くと読み、確かめ、育つ</title>
+<style>
+  :root{
+    --bg:#04060b; --panel:#0c111d; --line:#1b2540; --ink:#e7edf8; --dim:#8794ae;
+    --pt:#ffffff; --seg:#cfe0ff; --x:#ff7ab6; --tri:#4fc3ff; --quad:#5dffa8; --poly:#c79bff;
+    --gold:#ffe27a; --ok:#5dffa8; --ng:#ff6b7a; --rev:#ffb84f;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic UI",system-ui,sans-serif}
+  header{padding:12px 16px 4px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{font-size:18px;margin:0;letter-spacing:.05em}
+  header .sub{color:var(--dim);font-size:12px}
+  .toggles{margin-left:auto;display:flex;gap:6px}
+  main{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:12px;padding:8px 12px 16px}
+  @media (max-width:960px){main{grid-template-columns:1fr}}
+  .stage{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
+    height:min(76vh,720px);min-height:420px;background:#020308}
+  #cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+  .tools{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 20px)}
+  .hud{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--dim);pointer-events:none}
+  .hud b{color:var(--ink)}
+  button{font:inherit;font-size:13px;border:1px solid #2f3b5c;background:#141c32cc;color:var(--ink);
+    border-radius:8px;padding:7px 11px;cursor:pointer;backdrop-filter:blur(4px)}
+  button:hover{background:#1f2a4dcc}
+  button.on{border-color:var(--gold);color:var(--gold)}
+  button.bot{border-color:#7fb0ff;color:#a9c8ff}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+  .panel+.panel{margin-top:10px}
+  h2{font-size:12px;margin:0 0 8px;color:var(--dim);font-weight:600;letter-spacing:.08em;display:flex;justify-content:space-between}
+  .facts{font-size:13px;line-height:1.55;max-height:260px;overflow:auto}
+  .fact{padding:5px 0;border-bottom:1px dashed #1a2236}
+  .fact .why{font-size:11px;color:var(--dim)}
+  .fact .tag{display:inline-block;font-size:10px;padding:0 6px;border-radius:10px;margin-right:6px;border:1px solid}
+  .rules{font-size:12.5px;line-height:1.55;max-height:300px;overflow:auto}
+  .rule{padding:7px 8px;border:1px solid #1d2742;border-radius:8px;margin-bottom:6px}
+  .rule .st{font-size:11px;float:right}
+  .rule.ok{border-color:#1f5a40}
+  .rule.ng{border-color:#5a1f2a;opacity:.75}
+  .rule.ng .txt{text-decoration:line-through;text-decoration-color:#ff6b7a88}
+  .rule .meta{font-size:11px;color:var(--dim);margin-top:2px}
+  .log{font-size:11.5px;line-height:1.6;max-height:220px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace;color:#b7c2db}
+  .log div{border-bottom:1px dashed #19213a;padding:2px 0}
+  .k-new{color:var(--gold)} .k-hit{color:var(--ok)} .k-miss{color:var(--ng)} .k-rev{color:var(--rev)} .k-bear{color:#a9c8ff}
+  .note{font-size:11.5px;color:var(--dim);line-height:1.7}
+  .empty{color:var(--dim);font-size:12px}
+  footer{padding:6px 16px 14px;color:var(--dim);font-size:11px;text-align:center;letter-spacing:.04em}
+</style>
+</head>
+<body>
+<header>
+  <h1>何も無い空間</h1>
+  <span class="sub">点や線を描くと、形を読み、性質と関係を出し、予想を立てて確かめます。確かめた発見だけが記録に積み上がります。</span>
+  <div class="toggles">
+    <button id="bgmBtn">BGM: OFF</button>
+    <button id="sfxBtn">効果音: ON</button>
+  </div>
+</header>
+
+<main>
+  <section class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="tools">
+      <button data-tool="pt">● 点</button>
+      <button data-tool="line" class="on">／ 線</button>
+      <button data-tool="erase">消しゴム</button>
+      <button id="undoBtn">元に戻す</button>
+      <button id="clearBtn">全部消す</button>
+      <button id="snapBtn" class="on">マス目に吸着</button>
+      <button id="botBtn" class="bot">ボットが1手描く</button>
+      <button id="autoBtn" class="bot">ボット自動: OFF</button>
+    </div>
+    <div class="hud" id="hud"></div>
+  </section>
+
+  <aside>
+    <div class="panel">
+      <h2><span>いま読めていること</span><span id="factCount"></span></h2>
+      <div class="facts" id="facts"><div class="empty">線をドラッグして描いてみてください。三角形を閉じると発見が弾けます。</div></div>
+    </div>
+    <div class="panel">
+      <h2><span>規則（予想と当たり外れ）</span><span id="ruleCount"></span></h2>
+      <div class="rules" id="rules"><div class="empty">まだ予想はありません。形を描くと、空間が自分で予想を立て始めます。</div></div>
+    </div>
+    <div class="panel">
+      <h2><span>確かめた記録</span><button id="resetMem" style="padding:2px 8px;font-size:11px">記録を初期化</button></h2>
+      <div class="log" id="log"><div class="empty">まだありません</div></div>
+    </div>
+    <div class="panel note">
+      確かめ役：性質や予想は、作図とは別の計算でその場で検査します（例：一筆書きは「奇数の点の数」の規則とは別に、実際に辿れる道を総当たりで探して照合）。
+      通ったものだけが記録に残ります。同じ種類の発見は二度目から記録せず、回数だけ数えます。
+    </div>
+  </aside>
+</main>
+
+<footer>版 v0.1 ・ 配置 2026-11-17 JST</footer>
+
+<script>
+"use strict";
+/* ================= 基本 ================= */
+const $ = id => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+const GRID = 30;                       // 1マス = 30px。長さ・面積はマス単位で表示
+let W = 0, H = 0;
+let tool = "line", snap = true;
+let S = {pts: [], segs: [], nextId: 1};    // 点 {id,x,y} / 線 {a,b}
+let undoStack = [];
+let step = 0;                          // 描画の手数
+let analysis = null;
+let drag = null, hover = null;
+
+function resize(){
+  const r = $("stage").getBoundingClientRect(), d = window.devicePixelRatio || 1;
+  W = r.width; H = r.height; cv.width = W*d; cv.height = H*d;
+  ctx.setTransform(d,0,0,d,0,0);
+}
+window.addEventListener("resize", resize);
+
+/* ================= 幾何の道具 ================= */
+const sub = (a,b) => ({x:a.x-b.x, y:a.y-b.y});
+const dot = (a,b) => a.x*b.x + a.y*b.y;
+const cross = (a,b) => a.x*b.y - a.y*b.x;
+const len = v => Math.hypot(v.x, v.y);
+const dist = (a,b) => len(sub(a,b));
+const U = v => v / GRID;                       // px → マス
+const fmt = (v, d=2) => { const r = Math.round(v*10**d)/10**d; return Number.isInteger(r) ? String(r) : r.toFixed(d).replace(/0+$/,""); };
+const TOL = () => snap ? 1e-6 : 0.02;          // 吸着中は格子点なので厳密に近い
+const eqRel = (a,b,t=TOL()) => Math.abs(a-b) <= Math.max(1e-9, t*Math.max(Math.abs(a),Math.abs(b)));
+const ANG_TOL = () => snap ? 0.05 : 1.5;       // 度
+
+function segIntersect(p1,p2,p3,p4){            // 内部で交わる点（端点どうしの接触は除く）
+  const r = sub(p2,p1), s = sub(p4,p3), den = cross(r,s);
+  if(Math.abs(den) < 1e-9) return null;
+  const t = cross(sub(p3,p1), s)/den, u = cross(sub(p3,p1), r)/den;
+  const e = 1e-6;
+  if(t>e && t<1-e && u>e && u<1-e) return {x:p1.x+t*r.x, y:p1.y+t*r.y};
+  return null;
+}
+function segsTouch(p1,p2,p3,p4){               // 単純多角形の判定用（接触も含む）
+  const o = (a,b,c) => Math.sign(Math.round(cross(sub(b,a),sub(c,a))*1e6));
+  const on = (a,b,c) => Math.min(a.x,b.x)-1e-6<=c.x && c.x<=Math.max(a.x,b.x)+1e-6 && Math.min(a.y,b.y)-1e-6<=c.y && c.y<=Math.max(a.y,b.y)+1e-6;
+  const o1=o(p1,p2,p3), o2=o(p1,p2,p4), o3=o(p3,p4,p1), o4=o(p3,p4,p2);
+  if(o1!==o2 && o3!==o4) return true;
+  if(o1===0 && on(p1,p2,p3)) return true; if(o2===0 && on(p1,p2,p4)) return true;
+  if(o3===0 && on(p3,p4,p1)) return true; if(o4===0 && on(p3,p4,p2)) return true;
+  return false;
+}
+function segAngle(a,b){ let t = Math.atan2(b.y-a.y, b.x-a.x)*180/Math.PI; t = (t+180)%180; return t; }
+function angDiff(a,b){ let d = Math.abs(a-b)%180; return Math.min(d, 180-d); }
+
+/* ================= 描く操作 ================= */
+function snapPos(p){ return snap ? {x: Math.round(p.x/GRID)*GRID, y: Math.round(p.y/GRID)*GRID} : p; }
+function findPoint(p, r=12){ let best=null, bd=r; for(const q of S.pts){ const d=dist(p,q); if(d<bd){bd=d;best=q;} } return best; }
+function pushUndo(){ undoStack.push(JSON.stringify(S)); if(undoStack.length>200) undoStack.shift(); }
+function addPoint(p){ const e = findPoint(p, 8); if(e) return e; const q = {id:S.nextId++, x:p.x, y:p.y}; S.pts.push(q); return q; }
+function hasSeg(a,b){ return S.segs.some(s => (s.a===a&&s.b===b)||(s.a===b&&s.b===a)); }
+function addSeg(p,q){
+  const A = addPoint(p), B = addPoint(q);
+  if(A.id===B.id || hasSeg(A.id,B.id)) return false;
+  S.segs.push({a:A.id, b:B.id}); return true;
+}
+function eraseAt(p){
+  const q = findPoint(p, 12);
+  if(q){ S.pts = S.pts.filter(x=>x.id!==q.id); S.segs = S.segs.filter(s=>s.a!==q.id&&s.b!==q.id); return true; }
+  const P = pmap();
+  let best=-1, bd=10;
+  S.segs.forEach((s,i)=>{ const a=P.get(s.a), b=P.get(s.b), ab=sub(b,a);
+    const t=Math.max(0,Math.min(1,dot(sub(p,a),ab)/dot(ab,ab))); const d=dist(p,{x:a.x+t*ab.x,y:a.y+t*ab.y}); if(d<bd){bd=d;best=i;} });
+  if(best>=0){ S.segs.splice(best,1); return true; }
+  return false;
+}
+const pmap = () => new Map(S.pts.map(p=>[p.id,p]));
+function evPos(e){ const r = cv.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+
+cv.addEventListener("pointerdown", e => {
+  ensureAudio(); cv.setPointerCapture(e.pointerId);
+  const p = evPos(e);
+  if(tool==="pt"){ pushUndo(); const before=S.pts.length; addPoint(snapPos(p)); if(S.pts.length>before){ step++; sfx(660,.05,"sine",.04); changed(); } else undoStack.pop(); }
+  else if(tool==="erase"){ pushUndo(); if(eraseAt(p)){ step++; sfx(200,.08,"triangle",.04); changed(); } else undoStack.pop(); }
+  else { const near = findPoint(p, 14); drag = {from: near ? {x:near.x,y:near.y} : snapPos(p), to: snapPos(p)}; }
+});
+cv.addEventListener("pointermove", e => {
+  const p = evPos(e); hover = snapPos(p);
+  if(drag){ const near = findPoint(p, 14); drag.to = near ? {x:near.x,y:near.y} : snapPos(p); }
+});
+cv.addEventListener("pointerup", () => {
+  if(!drag) return;
+  if(dist(drag.from, drag.to) > 6){ pushUndo(); if(addSeg(drag.from, drag.to)){ step++; sfx(440,.06,"sine",.04); changed(); } else undoStack.pop(); }
+  drag = null;
+});
+cv.addEventListener("pointerleave", () => { hover = null; });
+
+document.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => {
+  tool = b.dataset.tool; document.querySelectorAll("[data-tool]").forEach(x=>x.classList.toggle("on", x===b));
+});
+$("undoBtn").onclick = () => { if(undoStack.length){ S = JSON.parse(undoStack.pop()); step++; changed(); } };
+$("clearBtn").onclick = () => { if(!S.pts.length) return; pushUndo(); S = {pts:[], segs:[], nextId:S.nextId}; step++; changed(); };
+$("snapBtn").onclick = () => { snap = !snap; $("snapBtn").classList.toggle("on", snap); changed(); };
+document.addEventListener("keydown", e => {
+  if((e.ctrlKey||e.metaKey) && e.key==="z"){ e.preventDefault(); $("undoBtn").click(); }
+  if(e.key==="1") document.querySelector('[data-tool="pt"]').click();
+  if(e.key==="2") document.querySelector('[data-tool="line"]').click();
+  if(e.key==="3") document.querySelector('[data-tool="erase"]').click();
+  if(e.key==="b") $("botBtn").click();
+});
+
+/* ================= 1. 形を読む・2. 性質を出す ================= */
+function findPolygons(P, adj){
+  const ids = [...adj.keys()].sort((a,b)=>a-b), out = [], seen = new Set();
+  for(const s of ids){
+    const stack = [[s,[s]]];
+    while(stack.length && out.length < 60){
+      const [v, path] = stack.pop();
+      for(const w of adj.get(v)){
+        if(w===s && path.length>=3){
+          if(path[1] < path[path.length-1]){
+            const key = [...path].sort((a,b)=>a-b).join(",")+"|"+path.join(",");
+            const vk = [...path].sort((a,b)=>a-b).join(",");
+            if(!seen.has(key)){ seen.add(key); const poly = makePoly(path.map(i=>P.get(i)), path); if(poly) out.push(poly); }
+          }
+        } else if(w > s && !path.includes(w) && path.length < 6) stack.push([w, [...path, w]]);
+      }
+    }
+  }
+  return out;
+}
+function makePoly(V, ids){
+  const n = V.length;
+  for(let i=0;i<n;i++){ const a=V[(i+n-1)%n], b=V[i], c=V[(i+1)%n];
+    if(Math.abs(cross(sub(b,a),sub(c,b))) < 1e-6) return null; }           // 一直線に並ぶ角は無効
+  for(let i=0;i<n;i++) for(let j=i+2;j<n;j++){ if(i===0 && j===n-1) continue;
+    if(segsTouch(V[i],V[(i+1)%n],V[j],V[(j+1)%n])) return null; }        // 自己交差は無効
+  let A2 = 0; for(let i=0;i<n;i++) A2 += cross(V[i], V[(i+1)%n]);
+  const orient = Math.sign(A2), area = Math.abs(A2)/2/(GRID*GRID);
+  const sides = V.map((v,i)=>U(dist(v,V[(i+1)%n])));
+  const angles = V.map((v,i)=>{ const a=V[(i+n-1)%n], c=V[(i+1)%n];
+    const u=sub(a,v), w=sub(c,v); let t = Math.acos(Math.max(-1,Math.min(1,dot(u,w)/(len(u)*len(w)))))*180/Math.PI;
+    const turn = Math.sign(cross(sub(v,a),sub(c,v))); return turn===orient ? t : 360-t; });
+  const convex = angles.every(t => t < 180);
+  const cx = V.reduce((s,v)=>s+v.x,0)/n, cy = V.reduce((s,v)=>s+v.y,0)/n;
+  const key = "poly:" + V.map(v=>v.x+","+v.y).sort().join(";");
+  const P = {n, V, ids, area, sides, angles, angleSum: angles.reduce((a,b)=>a+b,0), convex, cx, cy, key,
+    perim: sides.reduce((a,b)=>a+b,0)};
+  classify(P); return P;
+}
+function classify(P){
+  const t = ANG_TOL(), right = P.angles.map(a => Math.abs(a-90) < t);
+  if(P.n===3){
+    const s = [...P.sides].sort((a,b)=>a-b);
+    const iso = eqRel(s[0],s[1]) || eqRel(s[1],s[2]), equi = eqRel(s[0],s[1]) && eqRel(s[1],s[2]);
+    P.right = right.some(Boolean); P.sortedSides = s;
+    const obtuse = P.angles.some(a => a > 90 + t);
+    P.type = equi ? "正三角形" : P.right ? (iso ? "直角二等辺三角形" : "直角三角形") : iso ? "二等辺三角形" : obtuse ? "鈍角三角形" : "鋭角三角形";
+    P.family = "tri";
+  } else if(P.n===4){
+    const V = P.V, e = i => segAngle(V[i], V[(i+1)%4]);
+    const par1 = angDiff(e(0),e(2)) < t, par2 = angDiff(e(1),e(3)) < t;
+    const allEq = P.sides.every(x => eqRel(x, P.sides[0]));
+    const allRight = right.every(Boolean);
+    P.type = !P.convex ? "凹四角形" : allRight && allEq ? "正方形" : allRight ? "長方形" : allEq ? "ひし形" :
+             (par1 && par2) ? "平行四辺形" : (par1 || par2) ? "台形" :
+             (eqRel(P.sides[0],P.sides[1]) && eqRel(P.sides[2],P.sides[3])) || (eqRel(P.sides[1],P.sides[2]) && eqRel(P.sides[3],P.sides[0])) ? "たこ形" : "四角形";
+    P.allEq = allEq; P.family = "quad";
+    const d1 = sub(V[2],V[0]), d2 = sub(V[3],V[1]);
+    P.diagPerp = P.convex && Math.abs(angDiff(segAngle(V[0],V[2]), segAngle(V[1],V[3])) - 90) < t;
+  } else {
+    const reg = P.sides.every(x=>eqRel(x,P.sides[0])) && P.angles.every(a=>Math.abs(a-P.angles[0])<t);
+    P.type = (reg ? "正" : P.convex ? "" : "凹") + ["","","","","","五","六"][P.n] + "角形";
+    P.family = "poly";
+  }
+}
+
+/* 一筆書き：規則（奇数の点の数）と、実際に辿る総当たりを別々に計算して照合する */
+function eulerBrute(edges, budget=300000){
+  const m = edges.length; if(m > 14) return null;
+  const used = new Array(m).fill(false); let calls = 0;
+  const verts = [...new Set(edges.flat())];
+  function go(v, k){ if(k===m) return true; if(++calls > budget) throw 0;
+    for(let i=0;i<m;i++) if(!used[i] && (edges[i][0]===v || edges[i][1]===v)){
+      used[i]=true; const w = edges[i][0]===v ? edges[i][1] : edges[i][0];
+      if(go(w,k+1)) return true; used[i]=false; }
+    return false; }
+  try{ for(const v of verts){ if(go(v,0)) return true; } return false; }catch(e){ return null; }
+}
+
+function analyze(){
+  const P = pmap(), segs = S.segs.map(s=>({a:P.get(s.a), b:P.get(s.b), ia:s.a, ib:s.b})).filter(s=>s.a&&s.b);
+  const facts = [];
+  const adj = new Map(); S.pts.forEach(p=>adj.set(p.id, new Set()));
+  segs.forEach(s=>{ adj.get(s.ia).add(s.ib); adj.get(s.ib).add(s.ia); });
+  const segKey = s => [s.a.x+","+s.a.y, s.b.x+","+s.b.y].sort().join("-");
+
+  // 交点
+  const X = [];
+  for(let i=0;i<segs.length;i++) for(let j=i+1;j<segs.length;j++){
+    const s=segs[i], t=segs[j]; if(s.ia===t.ia||s.ia===t.ib||s.ib===t.ia||s.ib===t.ib) continue;
+    const q = segIntersect(s.a,s.b,t.a,t.b); if(q) X.push(q);
+  }
+  X.forEach(q => facts.push({key:"x:"+Math.round(q.x)+","+Math.round(q.y), kind:"交点", fam:"x", x:q.x, y:q.y,
+    text:`交点 (${fmt(U(q.x),1)}, ${fmt(U(q.y),1)})`, why:"2本の線の式を連立して、両方の線分の内側にある点を求めた"}));
+
+  // 多角形
+  const polys = findPolygons(P, adj);
+  for(const pg of polys){
+    const angTxt = pg.angles.map(a=>fmt(a,1)+"°").join("・");
+    facts.push({key:pg.key, kind:pg.type, fam:pg.family, x:pg.cx, y:pg.cy, poly:pg,
+      text:`${pg.type}　面積 ${fmt(pg.area)} マス・周 ${fmt(pg.perim)}`,
+      why:`面積は靴ひも公式。角は ${angTxt}、合計 ${fmt(pg.angleSum,1)}°`});
+  }
+
+  // 関係：平行・垂直
+  const rel = [];
+  for(let i=0;i<segs.length;i++) for(let j=i+1;j<segs.length;j++){
+    const s=segs[i], t=segs[j]; const d = angDiff(segAngle(s.a,s.b), segAngle(t.a,t.b));
+    const share = s.ia===t.ia||s.ia===t.ib||s.ib===t.ia||s.ib===t.ib;
+    const mid = {x:(s.a.x+s.b.x+t.a.x+t.b.x)/4, y:(s.a.y+s.b.y+t.a.y+t.b.y)/4};
+    const k = [segKey(s), segKey(t)].sort().join("|");
+    if(d < ANG_TOL() && !share){
+      const onLine = Math.abs(cross(sub(t.a,s.a), sub(s.b,s.a))) < 1e-6;
+      if(!onLine){ rel.push({type:"par", s, t}); facts.push({key:"par:"+k, kind:"平行", fam:"rel", x:mid.x, y:mid.y, s, t,
+        text:`平行な2本（長さ ${fmt(U(dist(s.a,s.b)))} と ${fmt(U(dist(t.a,t.b)))}）`, why:`向きの差 ${fmt(d,2)}°`}); }
+    }
+    if(Math.abs(d-90) < ANG_TOL()){ rel.push({type:"perp", s, t}); facts.push({key:"perp:"+k, kind:"垂直", fam:"rel", x:mid.x, y:mid.y, s, t,
+      text:`直角に交わる向きの2本`, why:`向きの差 ${fmt(d,2)}°（内積がほぼ 0）`}); }
+  }
+
+  // 関係：一直線上の点（3点以上）
+  const pts = S.pts.slice(0, 80), lines = new Set();
+  for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++){
+    const on = pts.filter(r => Math.abs(cross(sub(pts[j],pts[i]), sub(r,pts[i]))) < (snap?1e-6:0.01*dist(pts[i],pts[j])*GRID));
+    if(on.length >= 3){ const k = on.map(r=>r.id).sort((a,b)=>a-b).join(","); if(!lines.has(k)){ lines.add(k);
+      const c = {x: on.reduce((s,r)=>s+r.x,0)/on.length, y: on.reduce((s,r)=>s+r.y,0)/on.length};
+      facts.push({key:"col:"+on.map(r=>r.x+","+r.y).sort().join(";"), kind:"一直線上", fam:"rel", x:c.x, y:c.y, line:on,
+        text:`${on.length} 点が一直線上`, why:"どの2点を選んでも傾きが同じ（外積が 0）"}); } }
+  }
+
+  // 関係：合同・相似（三角形どうし）
+  const tris = polys.filter(p=>p.n===3);
+  const pairs = [];
+  for(let i=0;i<tris.length;i++) for(let j=i+1;j<tris.length;j++){
+    const a = tris[i].sortedSides, b = tris[j].sortedSides, r = a[0]/b[0];
+    const sim = eqRel(a[1]/b[1], r) && eqRel(a[2]/b[2], r);
+    pairs.push({A:tris[i], B:tris[j], sim, r});
+    if(sim){ const cong = eqRel(r,1); const k = [tris[i].key,tris[j].key].sort().join("|");
+      facts.push({key:(cong?"cong:":"sim:")+k, kind: cong ? "合同" : "相似", fam:"rel", x:(tris[i].cx+tris[j].cx)/2, y:(tris[i].cy+tris[j].cy)/2,
+        text: cong ? "合同な三角形の組" : `相似な三角形の組（比 ${fmt(r>1?r:1/r)} : 1）`, why:"三辺の長さの比がすべて等しい"}); }
+  }
+
+  // 一筆書き
+  let euler = null;
+  const edgeVerts = [...adj.entries()].filter(([,s])=>s.size>0).map(([v])=>v);
+  if(segs.length >= 2){
+    const comp = new Set(), st = [edgeVerts[0]]; while(st.length){ const v=st.pop(); if(comp.has(v)) continue; comp.add(v); adj.get(v).forEach(w=>st.push(w)); }
+    const connected = comp.size === edgeVerts.length;
+    const odd = edgeVerts.filter(v => adj.get(v).size % 2 === 1).length;
+    const ruleSays = connected && (odd===0 || odd===2);
+    const brute = connected ? eulerBrute(segs.map(s=>[s.ia,s.ib])) : false;
+    euler = {connected, odd, ruleSays, brute, sig: segs.map(segKey).sort().join("|"), m: segs.length};
+    const cx = S.pts.reduce((s,p)=>s+p.x,0)/S.pts.length, cy = S.pts.reduce((s,p)=>s+p.y,0)/S.pts.length;
+    facts.push({key:"euler:"+connected+":"+ruleSays, kind: ruleSays ? "一筆書きできる" : "一筆書きできない", fam:"euler", x:cx, y:cy,
+      text: !connected ? "線が離れているので一筆書きできない" : `一筆書き${ruleSays?"できる":"できない"}（奇数本の線が集まる点 ${odd} 個）`,
+      why: brute===null ? "線が多いので総当たりの照合は省略" : `総当たりで実際に辿って照合：${brute?"辿れた":"辿れない"}`});
+  }
+  return {facts, polys, X, rel, pairs, euler, segs};
+}
+
+/* ================= 4. 規則を立てる・5. 規則が変わる ================= */
+/* scope: poly（図形ごと） / pair（三角形の組ごと） / global（空間全体） */
+const RULE_DEFS = [
+  {id:"C1", scope:"poly", text:"三角形の内角の和は 180° になる",
+    applies:p=>p.n===3, holds:p=>Math.abs(p.angleSum-180)<0.5,
+    check:"角を一つずつ測って足す"},
+  {id:"C2", scope:"poly", text:"n角形の内角の和は (n−2)×180° になる",
+    applies:p=>p.n>=4, holds:p=>Math.abs(p.angleSum-(p.n-2)*180)<0.5,
+    check:"角を一つずつ測って足す"},
+  {id:"C4", scope:"poly", text:"直角三角形では 斜辺² = 他の二辺² の和",
+    applies:p=>p.n===3&&p.right, holds:p=>{ const s=p.sortedSides; return Math.abs(s[2]*s[2]-(s[0]*s[0]+s[1]*s[1])) < 0.02*s[2]*s[2]; },
+    check:"角度で直角を見つけ、長さで式を確かめる（別々の計算）"},
+  {id:"C3", scope:"global", text:"つながった図形は、奇数本の線が集まる点が 0 個か 2 個のときだけ一筆書きできる",
+    applies:a=>a.euler && a.euler.connected && a.euler.brute!==null, holds:a=>a.euler.ruleSays===a.euler.brute,
+    key:a=>"e:"+a.euler.sig, check:"実際に辿れる道を総当たりで探して照合"},
+  {id:"N1", scope:"poly", naive:true, revise:"R1", text:"四角形の対角線は直角に交わる",
+    applies:p=>p.n===4&&p.convex, holds:p=>p.diagPerp, check:"2本の対角線の向きの差を測る"},
+  {id:"R1", scope:"poly", hidden:true, text:"四辺が等しい四角形（ひし形・正方形）なら、対角線は直角に交わる",
+    applies:p=>p.n===4&&p.convex&&p.allEq, holds:p=>p.diagPerp, check:"2本の対角線の向きの差を測る"},
+  {id:"N2", scope:"pair", naive:true, revise:"R2", text:"周の長さが長い三角形ほど、面積も大きい",
+    applies:q=>!eqRel(q.A.perim,q.B.perim,1e-3), holds:q=>(q.A.perim-q.B.perim)*(q.A.area-q.B.area) >= -1e-9, check:"二つの周と面積を比べる"},
+  {id:"R2", scope:"pair", hidden:true, text:"相似な三角形なら、面積の比は 周の比の2乗 になる",
+    applies:q=>q.sim, holds:q=>{ const r=q.A.perim/q.B.perim; return eqRel(q.A.area/q.B.area, r*r, 0.02); }, check:"面積の比と周の比をそれぞれ計算"},
+  {id:"N3", scope:"global", naive:true, revise:"R3", text:"交点の数は いつも 線の本数 − 1 になる",
+    applies:a=>a.segs.length>=2, holds:a=>a.X.length===a.segs.length-1, key:a=>"x:"+a.segs.length+":"+a.X.length, check:"交点を数える"},
+  {id:"R3", scope:"global", hidden:true, text:"交点の数は 線の本数×(線の本数−1)÷2 を超えない",
+    applies:a=>a.segs.length>=2, holds:a=>a.X.length <= a.segs.length*(a.segs.length-1)/2, key:a=>"x:"+a.segs.length+":"+a.X.length, check:"交点を数える"},
+];
+let R = {};            // 規則の状態 {status:'none'|'live'|'broken', hits, misses, born, seen:[], revisedTo}
+let seenKinds = {};    // 発見の種類 → 回数
+let LOG = [];
+function initRules(){ R = {}; RULE_DEFS.forEach(d => R[d.id] = {status:"none", hits:0, misses:0, born:null, seen:[]}); }
+
+function instancesFor(def, a){
+  if(def.scope==="poly") return a.polys.filter(def.applies).map(p => ({k:p.key, obj:p, x:p.cx, y:p.cy}));
+  if(def.scope==="pair") return a.pairs.filter(def.applies).map(q => ({k:[q.A.key,q.B.key].sort().join("|"), obj:q, x:(q.A.cx+q.B.cx)/2, y:(q.A.cy+q.B.cy)/2}));
+  if(def.applies(a)){ const c = centerAll(); return [{k:def.key(a), obj:a, x:c.x, y:c.y}]; }
+  return [];
+}
+function centerAll(){ if(!S.pts.length) return {x:W/2,y:H/2}; return {x:S.pts.reduce((s,p)=>s+p.x,0)/S.pts.length, y:S.pts.reduce((s,p)=>s+p.y,0)/S.pts.length}; }
+
+function runRules(a, events){
+  for(const def of RULE_DEFS){
+    const st = R[def.id];
+    if(st.status==="broken") continue;
+    if(def.hidden && st.status==="none") continue;            // 修正版は、元の規則が外れるまで生まれない
+    for(const inst of instancesFor(def, a)){
+      if(st.seen.includes(inst.k)) continue;
+      st.seen.push(inst.k); if(st.seen.length>400) st.seen.shift();
+      const ok = def.holds(inst.obj);
+      if(st.status==="none"){
+        if(ok){ st.status="live"; st.born=step; events.push({t:"bear", def, x:inst.x, y:inst.y}); }
+        continue;
+      }
+      if(ok){ st.hits++; events.push({t:"hit", def, x:inst.x, y:inst.y, n:st.hits}); }
+      else {
+        st.misses++; st.status="broken"; st.brokenAt=step;
+        events.push({t:"miss", def, x:inst.x, y:inst.y});
+        if(def.revise){
+          const rv = R[def.revise]; rv.status="live"; rv.born=step; st.revisedTo=def.revise;
+          events.push({t:"rev", def: RULE_DEFS.find(d=>d.id===def.revise), from:def, x:inst.x, y:inst.y});
+        }
+        break;
+      }
+    }
+  }
+}
+
+/* ================= 変化のたびに：読む → 確かめる → 弾ける ================= */
+let prevKeys = new Set();
+function changed(){
+  const a = analyze(); analysis = a;
+  const events = [];
+  // 新しく現れた事実（前の状態と比べる）
+  for(const f of a.facts){
+    if(prevKeys.has(f.key)) continue;
+    const first = !seenKinds[f.kind];
+    seenKinds[f.kind] = (seenKinds[f.kind]||0) + 1;
+    events.push({t:"fact", f, first});
+  }
+  prevKeys = new Set(a.facts.map(f=>f.key));
+  runRules(a, events);
+  // 記録：新しい種類の発見・予想・外れ・修正・節目の当たりだけ（雑音を増やさない）
+  for(const e of events){
+    if(e.t==="fact" && e.first) addLog("new", `新しい発見：${e.f.kind}`, e.f.why);
+    if(e.t==="bear") addLog("bear", `予想を立てた：${e.def.text}`, `確かめ方：${e.def.check}`);
+    if(e.t==="hit" && [1,5,10,25,50,100,250].includes(e.n)) addLog("hit", `当たり ${e.n} 回目：${e.def.text}`, "");
+    if(e.t==="miss") addLog("miss", `外れた：${e.def.text}`, "反例が描かれたので、この規則は捨てる");
+    if(e.t==="rev") addLog("rev", `直した：${e.def.text}`, `「${e.from.text}」の外れから、成り立つ範囲を絞り直した`);
+  }
+  playChain(events);
+  renderPanels(); save();
+}
+function addLog(k, text, why){
+  const d = new Date(), t = `${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  LOG.push({k, text, why, step, t}); if(LOG.length>500) LOG.shift();
+}
+
+/* ================= 表示パネル ================= */
+const FAM_COL = {tri:"#4fc3ff", quad:"#5dffa8", poly:"#c79bff", x:"#ff7ab6", rel:"#ffe27a", euler:"#ffb84f"};
+const FAM_TAG = {tri:"三角形", quad:"四角形", poly:"多角形", x:"交点", rel:"関係", euler:"一筆書き"};
+function renderPanels(){
+  const a = analysis, F = $("facts");
+  if(!a.facts.length){ F.innerHTML = '<div class="empty">線をドラッグして描いてみてください。三角形を閉じると発見が弾けます。</div>'; }
+  else {
+    const order = ["tri","quad","poly","rel","x","euler"];
+    const list = [...a.facts].sort((p,q)=>order.indexOf(p.fam)-order.indexOf(q.fam)).slice(0,80);
+    F.innerHTML = list.map(f => `<div class="fact"><span class="tag" style="color:${FAM_COL[f.fam]};border-color:${FAM_COL[f.fam]}55">${FAM_TAG[f.fam]}</span>${f.text}<div class="why">根拠：${f.why}</div></div>`).join("");
+  }
+  $("factCount").textContent = a.facts.length ? `${a.facts.length} 件` : "";
+  const shown = RULE_DEFS.filter(d => R[d.id].status!=="none");
+  $("rules").innerHTML = shown.length ? shown.map(d => { const st = R[d.id];
+    const cls = st.status==="broken" ? "ng" : st.hits>=3 ? "ok" : "";
+    const lab = st.status==="broken" ? `<span class="k-miss">外れ → ${st.revisedTo ? "修正版へ" : "破棄"}</span>` :
+                st.hits>=3 ? `<span class="k-hit">当たり続け</span>` : `<span class="k-bear">予想中</span>`;
+    return `<div class="rule ${cls}"><span class="st">${lab}</span><div class="txt">${d.text}</div>
+      <div class="meta">当たり ${st.hits} ・ 外れ ${st.misses} ・ ${st.born}手目に立てた${d.hidden?"（修正版）":""}${st.status==="broken"?` ・ ${st.brokenAt}手目に反例`:""}<br>確かめ方：${d.check}</div></div>`; }).join("")
+    : '<div class="empty">まだ予想はありません。形を描くと、空間が自分で予想を立て始めます。</div>';
+  $("ruleCount").textContent = shown.length ? `${shown.filter(d=>R[d.id].status==="live").length} 生存 / ${shown.length}` : "";
+  $("log").innerHTML = LOG.length ? LOG.slice().reverse().slice(0,120).map(l =>
+    `<div><span class="k-${l.k}">${l.t} #${l.step}</span> ${l.text}${l.why?`<br><span style="color:var(--dim)">　${l.why}</span>`:""}</div>`).join("")
+    : '<div class="empty">まだありません</div>';
+}
+
+/* ================= 保存 ================= */
+function save(){ try{ localStorage.setItem("kuukan-kijutsu-v1", JSON.stringify({S, step, R, seenKinds, LOG, snap})); }catch(e){} }
+function load(){
+  initRules();
+  try{ const d = JSON.parse(localStorage.getItem("kuukan-kijutsu-v1")||"null");
+    if(d){ S=d.S; step=d.step||0; seenKinds=d.seenKinds||{}; LOG=d.LOG||[]; snap = d.snap!==false;
+      for(const k in d.R) if(R[k]) Object.assign(R[k], d.R[k]); } }catch(e){}
+  $("snapBtn").classList.toggle("on", snap);
+}
+$("resetMem").onclick = () => { initRules(); seenKinds = {}; LOG = []; prevKeys = new Set(); changed(); };
+
+/* ================= ボット（1手ずつ描く） ================= */
+const SHAPES = [
+  [[0,0],[4,0],[0,3]],                 // 直角三角形 3-4-5
+  [[0,0],[3,0],[3,3],[0,3]],           // 正方形
+  [[0,0],[5,0],[5,2],[0,2]],           // 長方形
+  [[0,0],[3,1],[4,4],[1,3]],           // ひし形
+  [[0,0],[2,1],[1,3],[-1,2]],          // 傾いた正方形
+  [[0,0],[4,0],[5,2],[1,2]],           // 平行四辺形
+  [[0,0],[5,0],[4,2],[1,2]],           // 台形
+  [[0,0],[4,0],[2,3]],                 // 二等辺三角形
+  [[0,0],[5,1],[1,3]],                 // 一般の三角形
+  [[0,0],[8,0],[0,6]],                 // 3-4-5 の2倍（相似）
+  [[0,0],[3,0],[4,2],[2,4],[-1,2]],    // 五角形
+];
+let botQueue = [];
+function botPlan(){
+  const cols = Math.floor(W/GRID)-2, rows = Math.floor(H/GRID)-2;
+  if(Math.random() < 0.18 && S.pts.length >= 2){             // ときどき、既存の点どうしを結ぶ
+    const a = S.pts[Math.floor(Math.random()*S.pts.length)], b = S.pts[Math.floor(Math.random()*S.pts.length)];
+    if(a!==b) return [[{x:a.x,y:a.y},{x:b.x,y:b.y}]];
+  }
+  const sh = SHAPES[Math.floor(Math.random()*SHAPES.length)];
+  const flip = Math.random()<.5 ? -1 : 1;
+  const pts = sh.map(([x,y]) => ({x: x*flip, y}));
+  const minX = Math.min(...pts.map(p=>p.x)), maxX = Math.max(...pts.map(p=>p.x)), maxY = Math.max(...pts.map(p=>p.y));
+  const ox = 1 + Math.floor(Math.random()*Math.max(1, cols-(maxX-minX))) - minX, oy = 3 + Math.floor(Math.random()*Math.max(1, rows-maxY-2));
+  const P = pts.map(p => ({x:(p.x+ox)*GRID, y:(p.y+oy)*GRID}));
+  return P.map((p,i) => [p, P[(i+1)%P.length]]);
+}
+function botStep(){
+  ensureAudio();
+  if(!botQueue.length){
+    if(S.segs.length > 40){ pushUndo(); S = {pts:[], segs:[], nextId:S.nextId}; step++; changed(); addLog("bear","ボット：空間を片付けた",""); return; }
+    botQueue = botPlan();
+  }
+  const [p,q] = botQueue.shift();
+  const wasSnap = snap; snap = true;
+  pushUndo(); if(addSeg(p,q)){ step++; sfx(440,.05,"sine",.03); changed(); } else undoStack.pop();
+  snap = wasSnap;
+}
+$("botBtn").onclick = botStep;
+let autoTimer = null;
+$("autoBtn").onclick = () => {
+  if(autoTimer){ clearInterval(autoTimer); autoTimer=null; $("autoBtn").textContent="ボット自動: OFF"; $("autoBtn").classList.remove("on"); }
+  else { autoTimer = setInterval(botStep, 650); $("autoBtn").textContent="ボット自動: ON"; $("autoBtn").classList.add("on"); }
+};
+
+/* ================= 描画と演出 ================= */
+let particles = [], rings = [], floaters = [], shake = 0, flash = 0, flashCol = "93,255,168";
+function render(){
+  const sx = shake ? (Math.random()-.5)*shake : 0, sy = shake ? (Math.random()-.5)*shake : 0;
+  ctx.save(); ctx.translate(sx, sy);
+  ctx.fillStyle = "#020308"; ctx.fillRect(-20,-20,W+40,H+40);
+  // マス目
+  ctx.fillStyle = snap ? "rgba(120,140,190,.22)" : "rgba(120,140,190,.08)";
+  for(let x=GRID;x<W;x+=GRID) for(let y=GRID;y<H;y+=GRID) ctx.fillRect(x-.75,y-.75,1.5,1.5);
+  const a = analysis;
+  if(a){
+    // 多角形の塗り
+    for(const pg of a.polys){
+      ctx.fillStyle = (FAM_COL[pg.family]||"#fff") + "16";
+      ctx.beginPath(); pg.V.forEach((v,i)=> i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y)); ctx.closePath(); ctx.fill();
+      // 直角のしるし
+      pg.V.forEach((v,i)=>{ if(Math.abs(pg.angles[i]-90) < ANG_TOL()){
+        const n=pg.n, A=pg.V[(i+n-1)%n], C=pg.V[(i+1)%n], u=sub(A,v), w=sub(C,v), lu=len(u), lw=len(w), k=9;
+        ctx.strokeStyle="rgba(255,226,122,.7)"; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(v.x+u.x/lu*k, v.y+u.y/lu*k); ctx.lineTo(v.x+u.x/lu*k+w.x/lw*k, v.y+u.y/lu*k+w.y/lw*k); ctx.lineTo(v.x+w.x/lw*k, v.y+w.y/lw*k); ctx.stroke(); }});
+    }
+    // 一直線上
+    ctx.setLineDash([4,6]); ctx.strokeStyle="rgba(255,226,122,.35)"; ctx.lineWidth=1;
+    for(const f of a.facts) if(f.line){ const L=[...f.line].sort((p,q)=>p.x-q.x||p.y-q.y); ctx.beginPath(); ctx.moveTo(L[0].x,L[0].y); ctx.lineTo(L[L.length-1].x,L[L.length-1].y); ctx.stroke(); }
+    ctx.setLineDash([]);
+    // 線
+    ctx.lineCap="round";
+    for(const s of a.segs){ ctx.strokeStyle="rgba(207,224,255,.9)"; ctx.lineWidth=2; ctx.shadowColor="#8fb4ff"; ctx.shadowBlur=6;
+      ctx.beginPath(); ctx.moveTo(s.a.x,s.a.y); ctx.lineTo(s.b.x,s.b.y); ctx.stroke(); }
+    ctx.shadowBlur=0;
+    // 平行のしるし
+    let gi=0; for(const r of a.rel) if(r.type==="par"){ for(const s of [r.s,r.t]){ const m={x:(s.a.x+s.b.x)/2,y:(s.a.y+s.b.y)/2}, d=sub(s.b,s.a), l=len(d), u={x:d.x/l,y:d.y/l}, n={x:-u.y,y:u.x};
+      ctx.strokeStyle="rgba(255,226,122,.6)"; ctx.lineWidth=1.3; ctx.beginPath(); ctx.moveTo(m.x-u.x*4+n.x*4,m.y-u.y*4+n.y*4); ctx.lineTo(m.x+u.x*3,m.y+u.y*3); ctx.lineTo(m.x-u.x*4-n.x*4,m.y-u.y*4-n.y*4); ctx.stroke(); } if(++gi>12) break; }
+    // 交点
+    for(const q of a.X){ ctx.fillStyle="#ff7ab6"; ctx.beginPath(); ctx.arc(q.x,q.y,3.5,0,Math.PI*2); ctx.fill(); }
+  }
+  // 点
+  for(const p of S.pts){ ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(p.x,p.y,3.6,0,Math.PI*2); ctx.fill(); }
+  // ドラッグ中
+  if(drag){ ctx.strokeStyle="rgba(255,226,122,.8)"; ctx.setLineDash([5,5]); ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(drag.from.x,drag.from.y); ctx.lineTo(drag.to.x,drag.to.y); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle="#ffe27a"; ctx.font="11px ui-monospace,monospace"; ctx.fillText(`長さ ${fmt(U(dist(drag.from,drag.to)))}`, drag.to.x+8, drag.to.y-8); }
+  else if(hover && tool!=="erase"){ ctx.strokeStyle="rgba(255,255,255,.25)"; ctx.beginPath(); ctx.arc(hover.x,hover.y,6,0,Math.PI*2); ctx.stroke(); }
+  // 演出
+  for(const r of rings){ ctx.strokeStyle=`rgba(${r.c},${r.life})`; ctx.lineWidth=r.w||2; ctx.beginPath(); ctx.arc(r.x,r.y,r.r,0,Math.PI*2); ctx.stroke(); }
+  for(const p of particles){ ctx.fillStyle=`rgba(${p.c},${p.life})`; ctx.fillRect(p.x,p.y,p.s,p.s); }
+  ctx.textAlign="center";
+  for(const f of floaters){ ctx.font=`${f.big?"bold 15px":"12px"} "Hiragino Sans","Noto Sans JP",sans-serif`; ctx.fillStyle=`rgba(${f.c},${Math.min(1,f.life*1.4)})`; ctx.fillText(f.text, f.x, f.y); }
+  ctx.textAlign="left";
+  if(flash>0){ ctx.fillStyle=`rgba(${flashCol},${flash*.14})`; ctx.fillRect(0,0,W,H); }
+  ctx.restore();
+  $("hud").innerHTML = `点 <b>${S.pts.length}</b>　線 <b>${S.segs.length}</b>　${step} 手目　｜　1:点 2:線 3:消しゴム　B:ボット　Ctrl+Z:戻す`;
+}
+function tick(){
+  particles = particles.filter(p => (p.x+=p.vx, p.y+=p.vy, p.vy+=.04, p.vx*=.98, p.life-=.014) > 0);
+  rings = rings.filter(r => (r.r+=r.v, r.life-=.022) > 0);
+  floaters = floaters.filter(f => (f.y-=.45, f.life-=.008) > 0);
+  if(shake>0){ shake*=.86; if(shake<.3) shake=0; }
+  if(flash>0) flash-=.03;
+  render(); requestAnimationFrame(tick);
+}
+function burst(x,y,c,n,v=3){ for(let i=0;i<n;i++){ const a=Math.random()*Math.PI*2, s=(.6+Math.random())*v;
+  particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1,s:1.5+Math.random()*2.5,life:1,c}); } }
+const hex2rgb = h => [1,3,5].map(i=>parseInt(h.slice(i,i+2),16)).join(",");
+
+/* 連鎖：一つの変化で出た発見と判定を、順番に弾けさせる */
+const PENTA = [523.3,587.3,659.3,784,880,1046.5,1174.7,1318.5,1568,1760];
+function playChain(events){
+  const order = {fact:0, bear:1, hit:2, miss:3, rev:4};
+  events.sort((p,q)=>order[p.t]-order[q.t]);
+  const list = events.slice(0, 40);
+  let gap = 0, idx = 0;
+  list.forEach(e => {
+    const d = gap; gap += e.t==="fact" ? (e.first?150:85) : 190;
+    const i = idx++;
+    setTimeout(() => {
+      if(e.t==="fact"){
+        const c = hex2rgb(FAM_COL[e.f.fam]||"#ffffff");
+        burst(e.f.x, e.f.y, c, e.first ? 60 : 14, e.first ? 4.5 : 2.2);
+        rings.push({x:e.f.x,y:e.f.y,r:4,v:e.first?3.2:1.6,life:1,c});
+        floaters.push({x:e.f.x, y:e.f.y-10, text:(e.first?"新！ ":"")+e.f.kind, c, life:1, big:e.first});
+        sfx(PENTA[Math.min(PENTA.length-1,i)], e.first?.18:.07, e.first?"triangle":"sine", e.first?.06:.035);
+        if(e.first){ shake = Math.max(shake, 7); flash = .8; flashCol = c; }
+      } else if(e.t==="bear"){
+        floaters.push({x:e.x, y:e.y-24, text:"予想：" + short(e.def.text), c:"169,200,255", life:1.3, big:true});
+        rings.push({x:e.x,y:e.y,r:8,v:2,life:1,c:"169,200,255",w:1}); chord([392,494,587],.25,.035);
+      } else if(e.t==="hit"){
+        burst(e.x,e.y,"93,255,168",10,2); floaters.push({x:e.x+20, y:e.y-30, text:`✓ 当たり ${e.n}`, c:"93,255,168", life:.9});
+        sfx(1318.5,.08,"sine",.03); sfx(1760,.08,"sine",.025);
+      } else if(e.t==="miss"){
+        rings.push({x:e.x,y:e.y,r:6,v:4,life:1,c:"255,107,122",w:3}); burst(e.x,e.y,"255,107,122",50,4);
+        floaters.push({x:e.x, y:e.y-34, text:"✗ 外れ：" + short(e.def.text), c:"255,107,122", life:1.5, big:true});
+        shake = 12; flash = 1; flashCol = "255,107,122"; sfx(110,.35,"sawtooth",.05); sfx(116,.35,"sawtooth",.04);
+      } else if(e.t==="rev"){
+        floaters.push({x:e.x, y:e.y+30, text:"↻ 直した：" + short(e.def.text), c:"255,184,79", life:1.6, big:true});
+        burst(e.x,e.y,"255,184,79",70,5); rings.push({x:e.x,y:e.y,r:10,v:5,life:1,c:"255,184,79",w:2});
+        flash = 1; flashCol = "255,184,79"; [392,494,587,784,988].forEach((f,k)=>setTimeout(()=>sfx(f,.15,"triangle",.045),k*70));
+      }
+    }, d);
+  });
+}
+const short = t => t.length > 22 ? t.slice(0,21)+"…" : t;
+
+/* ================= 音 ================= */
+let AC=null, sfxOn=true, bgmOn=false, bgm=[];
+function ensureAudio(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&AC.state==="suspended") AC.resume(); }
+function sfx(f,d,type="sine",vol=.04){
+  if(!sfxOn||!AC) return; const o=AC.createOscillator(), g=AC.createGain(), t=AC.currentTime;
+  o.type=type; o.frequency.setValueAtTime(f,t); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(.0001,t+d+.12);
+  o.connect(g).connect(AC.destination); o.start(t); o.stop(t+d+.15);
+}
+function chord(fs,d,v){ fs.forEach((f,i)=>setTimeout(()=>sfx(f,d,"sine",v),i*50)); }
+function startBGM(){
+  ensureAudio(); if(!AC) return;
+  const m=AC.createGain(); m.gain.value=.022; m.connect(AC.destination);
+  const notes=[130.8,196,246.9,329.6];
+  notes.forEach((f,i)=>{ const o=AC.createOscillator(), g=AC.createGain(), l=AC.createOscillator(), lg=AC.createGain();
+    o.type="sine"; o.frequency.value=f; l.frequency.value=.04+i*.025; lg.gain.value=.45; g.gain.value=.5;
+    l.connect(lg).connect(g.gain); o.connect(g).connect(m); o.start(); l.start(); bgm.push(o,l); });
+  bgm.push({stop(){ m.disconnect(); }});
+}
+function stopBGM(){ bgm.forEach(n=>{ try{n.stop();}catch(e){} }); bgm=[]; }
+$("bgmBtn").onclick = () => { bgmOn=!bgmOn; bgmOn?startBGM():stopBGM(); $("bgmBtn").textContent="BGM: "+(bgmOn?"ON":"OFF"); };
+$("sfxBtn").onclick = () => { sfxOn=!sfxOn; $("sfxBtn").textContent="効果音: "+(sfxOn?"ON":"OFF"); };
+
+/* ================= 起動 ================= */
+resize(); load();
+analysis = analyze(); prevKeys = new Set(analysis.facts.map(f=>f.key));
+renderPanels(); requestAnimationFrame(tick);
+</script>
+</body>
+</html>
