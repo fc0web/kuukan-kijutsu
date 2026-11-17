@@ -1,0 +1,71 @@
+{
+  "count": 7,
+  "all_rejected": true,
+  "rejected_count": 7,
+  "passed_through_by_mistake": 0,
+  "outcome": [
+    {
+      "name": "wrong-right-triangle",
+      "note": "鈍角三角形に「直角三角形」の札を貼る（ピタゴラスで check 落ちするはず）",
+      "finding_type": "polygon:triangle:right",
+      "finding_title": "直角三角形",
+      "check_pass": false,
+      "method": "ヘロンで面積・ピタゴラスで直角を確かめた",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-parallel",
+      "note": "22°傾いた2本に「平行」の札を貼る（外積がゼロでないので check 落ち）",
+      "finding_type": "relation:parallel",
+      "finding_title": "平行",
+      "check_pass": false,
+      "method": "方向ベクトルの外積がほぼ 0 であることで平行を再確認",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-perpendicular",
+      "note": "平行に近い2本に「垂直」の札を貼る（内積がゼロでないので check 落ち）",
+      "finding_type": "relation:perpendicular",
+      "finding_title": "垂直",
+      "check_pass": false,
+      "method": "方向ベクトルの内積がほぼ 0 であることで垂直を再確認",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-euler-possible",
+      "note": "一筆書きできない図（奇数次 4 個）に「できる」の札を貼る",
+      "finding_type": "euler",
+      "finding_title": "一筆書きできる",
+      "check_pass": false,
+      "method": "実際に辿れる道を総当たりで探し、規則の結論と一致するか確かめた",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-similarity",
+      "note": "辺の比が違う2つの直角三角形に「相似」の札を貼る",
+      "finding_type": "similarity",
+      "finding_title": "相似な三角形の組",
+      "check_pass": false,
+      "method": "角度の多重集合が一致することで相似を再確認",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-collinear",
+      "note": "直線上にない3点に「一直線上」の札を貼る",
+      "finding_type": "collinear",
+      "finding_title": "3 点が一直線上",
+      "check_pass": false,
+      "method": "最小二乗で直線を当てはめ、残差の広がりがほぼ 0 であることを確かめた",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-polygon-area",
+      "note": "正しい正方形の finding の面積だけを 9 → 9.5 に書き換える",
+      "finding_type": "polygon:quad:square",
+      "finding_title": "正方形",
+      "check_pass": false,
+      "method": "靴ひも公式を再計算して面積を照合",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    }
+  ]
+}

@@ -300,6 +300,95 @@
         "step": 0,
         "source": "human"
       }
+    },
+    {
+      "name": "not-snapped-triangle",
+      "description": "マス目に吸着していない 3-4-5 直角三角形（非整数座標）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0.3, "y": 0.1},
+          {"id": 2, "kind": "point", "x": 4.3, "y": 0.1},
+          {"id": 3, "kind": "point", "x": 0.3, "y": 3.1},
+          {"id": 4, "kind": "segment", "a": 1, "b": 2},
+          {"id": 5, "kind": "segment", "a": 2, "b": 3},
+          {"id": 6, "kind": "segment", "a": 3, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "concave-quad-dart",
+      "description": "別の向きのへこんだ四角形（下辺側に窪み）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0, "y": 0},
+          {"id": 2, "kind": "point", "x": 6, "y": 0},
+          {"id": 3, "kind": "point", "x": 3, "y": 2},
+          {"id": 4, "kind": "point", "x": 3, "y": 5},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4},
+          {"id": 8, "kind": "segment", "a": 4, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "nearly-parallel-inside",
+      "description": "許容誤差の内側（約1°差）で平行と見なされるべき2本",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0.0, "y": 0.0},
+          {"id": 2, "kind": "point", "x": 10.0, "y": 0.0},
+          {"id": 3, "kind": "point", "x": 0.0, "y": 2.0},
+          {"id": 4, "kind": "point", "x": 10.0, "y": 2.175},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 3, "b": 4}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "nearly-parallel-outside",
+      "description": "許容誤差の外側（約2°差）で平行と見なされないはずの2本",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 0.0, "y": 0.0},
+          {"id": 2, "kind": "point", "x": 10.0, "y": 0.0},
+          {"id": 3, "kind": "point", "x": 0.0, "y": 2.0},
+          {"id": 4, "kind": "point", "x": 10.0, "y": 2.350},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 3, "b": 4}
+        ],
+        "step": 0,
+        "source": "human"
+      }
+    },
+    {
+      "name": "rotated-square",
+      "description": "ピタゴラス回転の正方形（辺 5、45° 以外の角度で軸と斜交）",
+      "space": {
+        "schema": "kuukan/0.2",
+        "shapes": [
+          {"id": 1, "kind": "point", "x": 4, "y": 0},
+          {"id": 2, "kind": "point", "x": 7, "y": 4},
+          {"id": 3, "kind": "point", "x": 3, "y": 7},
+          {"id": 4, "kind": "point", "x": 0, "y": 3},
+          {"id": 5, "kind": "segment", "a": 1, "b": 2},
+          {"id": 6, "kind": "segment", "a": 2, "b": 3},
+          {"id": 7, "kind": "segment", "a": 3, "b": 4},
+          {"id": 8, "kind": "segment", "a": 4, "b": 1}
+        ],
+        "step": 0,
+        "source": "human"
+      }
     }
   ]
 }

@@ -24,6 +24,16 @@ function toV01State(space) {
   return { pts, segs, nextId: 1 + Math.max(0, ...space.shapes.map(s => s.id || 0)) };
 }
 
+// 空間が「マス目吸着」されているかを自動判定（すべての点が整数座標ならそう）
+function detectSnap(space) {
+  const pts = space.shapes.filter(s => s.kind === "point");
+  for (const p of pts) {
+    if (Math.abs(p.x - Math.round(p.x)) > 1e-9) return false;
+    if (Math.abs(p.y - Math.round(p.y)) > 1e-9) return false;
+  }
+  return true;
+}
+
 const casesPath = path.join(__dirname, "cases.json");
 const outPath = path.join(__dirname, "v01-answers.json");
 const cases = JSON.parse(fs.readFileSync(casesPath, "utf8")).cases;
@@ -31,9 +41,11 @@ const cases = JSON.parse(fs.readFileSync(casesPath, "utf8")).cases;
 const answers = {};
 for (const c of cases) {
   const state = toV01State(c.space);
-  const result = analyze(state, { snap: true });
+  const snap = detectSnap(c.space);
+  const result = analyze(state, { snap });
   answers[c.name] = {
     description: c.description,
+    snap,
     findings: canonicalizeV01(result)
   };
 }

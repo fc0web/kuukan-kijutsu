@@ -928,5 +928,245 @@
       }
     ],
     "rejected": []
+  },
+  "not-snapped-triangle": {
+    "description": "マス目に吸着していない 3-4-5 直角三角形（非整数座標）",
+    "findings": [
+      {
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "category": "euler",
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "type": "直角三角形",
+        "refs": [
+          1,
+          2,
+          3
+        ],
+        "category": "polygon",
+        "metrics": {
+          "n": 3,
+          "area": 6,
+          "perim": 12,
+          "sides_sorted": [
+            3,
+            4,
+            5
+          ],
+          "angleSum": 180,
+          "convex": true
+        }
+      },
+      {
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "1-3"
+        ],
+        "category": "relation:perpendicular"
+      }
+    ],
+    "rejected": []
+  },
+  "concave-quad-dart": {
+    "description": "別の向きのへこんだ四角形（下辺側に窪み）",
+    "findings": [
+      {
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "category": "euler",
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "type": "凹四角形",
+        "refs": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "category": "polygon",
+        "metrics": {
+          "n": 4,
+          "area": 10.5,
+          "perim": 18.4365,
+          "sides_sorted": [
+            3,
+            3.6056,
+            5.831,
+            6
+          ],
+          "angleSum": 360,
+          "convex": false
+        }
+      },
+      {
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "3-4"
+        ],
+        "category": "relation:perpendicular"
+      }
+    ],
+    "rejected": []
+  },
+  "nearly-parallel-inside": {
+    "description": "許容誤差の内側（約1°差）で平行と見なされるべき2本",
+    "findings": [
+      {
+        "type": "不可",
+        "refs": [
+          "global"
+        ],
+        "category": "euler",
+        "metrics": {
+          "connected": false,
+          "odd": 4,
+          "brute": false
+        }
+      }
+    ],
+    "rejected": [
+      {
+        "finding": {
+          "key": "geometry:relation:parallel:1-2|3-4",
+          "reader": "geometry",
+          "type": "relation:parallel",
+          "title": "平行",
+          "value": {
+            "angleDiff": 1.0025738037600718
+          },
+          "basis": "2本の向きの差が ≈ 0°",
+          "refs": [
+            5,
+            6
+          ],
+          "certainty": "許容内"
+        },
+        "method": "方向ベクトルの外積がほぼ 0 であることで平行を再確認"
+      }
+    ]
+  },
+  "nearly-parallel-outside": {
+    "description": "許容誤差の外側（約2°差）で平行と見なされないはずの2本",
+    "findings": [
+      {
+        "type": "不可",
+        "refs": [
+          "global"
+        ],
+        "category": "euler",
+        "metrics": {
+          "connected": false,
+          "odd": 4,
+          "brute": false
+        }
+      }
+    ],
+    "rejected": []
+  },
+  "rotated-square": {
+    "description": "ピタゴラス回転の正方形（辺 5、45° 以外の角度で軸と斜交）",
+    "findings": [
+      {
+        "type": "可",
+        "refs": [
+          "global"
+        ],
+        "category": "euler",
+        "metrics": {
+          "connected": true,
+          "odd": 0,
+          "brute": true
+        }
+      },
+      {
+        "type": "正方形",
+        "refs": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "category": "polygon",
+        "metrics": {
+          "n": 4,
+          "area": 25,
+          "perim": 20,
+          "sides_sorted": [
+            5,
+            5,
+            5,
+            5
+          ],
+          "angleSum": 360,
+          "convex": true
+        }
+      },
+      {
+        "type": "平行",
+        "refs": [
+          "1-2",
+          "3-4"
+        ],
+        "category": "relation:parallel"
+      },
+      {
+        "type": "平行",
+        "refs": [
+          "1-4",
+          "2-3"
+        ],
+        "category": "relation:parallel"
+      },
+      {
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "1-4"
+        ],
+        "category": "relation:perpendicular"
+      },
+      {
+        "type": "垂直",
+        "refs": [
+          "1-2",
+          "2-3"
+        ],
+        "category": "relation:perpendicular"
+      },
+      {
+        "type": "垂直",
+        "refs": [
+          "1-4",
+          "3-4"
+        ],
+        "category": "relation:perpendicular"
+      },
+      {
+        "type": "垂直",
+        "refs": [
+          "2-3",
+          "3-4"
+        ],
+        "category": "relation:perpendicular"
+      }
+    ],
+    "rejected": []
   }
 }
