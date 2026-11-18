@@ -21,14 +21,35 @@
   @media (max-width:960px){main{grid-template-columns:1fr}}
   .stage{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;
     height:min(76vh,720px);min-height:420px;background:#020308}
-  #cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
-  .tools{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;max-width:calc(100% - 20px)}
+  #cv{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair;
+    user-select:none;-webkit-user-select:none}
+  .tools{position:absolute;left:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;
+    max-width:calc(100% - 20px);pointer-events:none;z-index:5}
+  .tools>button{pointer-events:auto}
   .hud{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--dim);pointer-events:none}
   .hud b{color:var(--ink)}
   .zoom{position:absolute;right:12px;bottom:10px;font-size:11px;color:var(--dim);
     background:#141c32cc;border:1px solid #2f3b5c;border-radius:6px;padding:3px 8px;
     pointer-events:none;font-family:ui-monospace,Menlo,Consolas,monospace}
   .zoom b{color:var(--ink)}
+  /* 画面の端の移動ボタン */
+  .vbtn{position:absolute;display:flex;align-items:center;justify-content:center;
+    width:30px;height:30px;background:#141c32cc;border:1px solid #2f3b5c;border-radius:6px;
+    color:var(--ink);cursor:pointer;user-select:none;font-size:14px;z-index:10;
+    pointer-events:auto;backdrop-filter:blur(4px)}
+  .vbtn:hover{background:#1f2a4dcc;border-color:var(--gold);color:var(--gold)}
+  .vbtn-up{top:112px;left:50%;transform:translateX(-50%)}
+  .vbtn-down{bottom:68px;left:50%;transform:translateX(-50%)}
+  .vbtn-left{left:10px;top:50%;transform:translateY(-50%)}
+  .vbtn-right{right:10px;top:50%;transform:translateY(-50%)}
+  /* 拡大・縮小ボタン */
+  .zoom-ctrl{position:absolute;right:12px;bottom:40px;display:flex;gap:4px;z-index:10;pointer-events:auto}
+  .zoom-ctrl button{padding:2px 10px;font-size:14px;line-height:1.1;min-width:32px}
+  /* 操作の説明 */
+  .hint{position:absolute;left:50%;bottom:4px;transform:translateX(-50%);
+    font-size:10.5px;color:var(--dim);background:#0c111dcc;padding:3px 10px;
+    border-radius:6px;pointer-events:none;white-space:nowrap;
+    max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis}
   button{font:inherit;font-size:13px;border:1px solid #2f3b5c;background:#141c32cc;color:var(--ink);
     border-radius:8px;padding:7px 11px;cursor:pointer;backdrop-filter:blur(4px)}
   button:hover{background:#1f2a4dcc}
@@ -86,8 +107,17 @@
       <button id="snapBtn" class="on">マス目に吸着</button>
       <button id="botBtn" class="bot">ボットが1手描く</button>
     </div>
+    <div class="vbtn vbtn-up" id="panUpBtn" title="上へ（↑）">▲</div>
+    <div class="vbtn vbtn-down" id="panDownBtn" title="下へ（↓）">▼</div>
+    <div class="vbtn vbtn-left" id="panLeftBtn" title="左へ（←）">◀</div>
+    <div class="vbtn vbtn-right" id="panRightBtn" title="右へ（→）">▶</div>
+    <div class="zoom-ctrl">
+      <button id="zoomOutBtn" title="縮小（Ctrl+ホイール下）">−</button>
+      <button id="zoomInBtn" title="拡大（Ctrl+ホイール上）">＋</button>
+    </div>
     <div class="hud" id="hud"></div>
     <div class="zoom" id="zoom">倍率 <b>100%</b></div>
+    <div class="hint">ホイール：上下　Shift＋ホイール：左右　Ctrl＋ホイール：拡大　矢印キー：移動　✋ or 右ドラッグ：移動</div>
   </section>
 
   <aside>
@@ -333,12 +363,24 @@ function isPanStart(e) {
   return false;
 }
 
+function panBy(dx, dy) { view.tx += dx; view.ty += dy; }
+
 document.addEventListener("keydown", e => {
-  if (e.code === "Space" && !spaceHeld) {
-    spaceHeld = true;
-    if (!drag) cv.style.cursor = "grab";
-    e.preventDefault();
+  const tag = e.target && e.target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+  if (e.code === "Space") {
+    if (!spaceHeld) {
+      spaceHeld = true;
+      if (!drag) cv.style.cursor = "grab";
+      e.preventDefault();
+    }
+    return;
   }
+  const step = 60;
+  if (e.code === "ArrowUp")    { panBy(0,  step); e.preventDefault(); }
+  if (e.code === "ArrowDown")  { panBy(0, -step); e.preventDefault(); }
+  if (e.code === "ArrowLeft")  { panBy( step, 0); e.preventDefault(); }
+  if (e.code === "ArrowRight") { panBy(-step, 0); e.preventDefault(); }
 });
 document.addEventListener("keyup", e => {
   if (e.code === "Space") {
@@ -349,7 +391,7 @@ document.addEventListener("keyup", e => {
 cv.addEventListener("contextmenu", e => e.preventDefault());
 
 cv.addEventListener("pointerdown", e => {
-  cv.setPointerCapture(e.pointerId);
+  try { cv.setPointerCapture(e.pointerId); } catch (_) { /* 失敗しても window の fallback で受ける */ }
   const p = evPos(e);
   activePointers.set(e.pointerId, { x: p.x, y: p.y, type: e.pointerType });
 
@@ -363,6 +405,7 @@ cv.addEventListener("pointerdown", e => {
       scale: view.scale, tx: view.tx, ty: view.ty
     };
     drag = null;
+    e.preventDefault();
     return;
   }
   // 2本目以降（タッチ以外）は無視
@@ -372,6 +415,8 @@ cv.addEventListener("pointerdown", e => {
   if (isPanStart(e)) {
     drag = { mode: "pan", startPx: p, startTx: view.tx, startTy: view.ty };
     cv.style.cursor = "grabbing";
+    // 実マウスのドラッグで文字選択・画像ドラッグに持っていかれないよう止める
+    e.preventDefault();
     return;
   }
 
@@ -430,6 +475,7 @@ cv.addEventListener("pointermove", e => {
   if (drag && drag.mode === "pan") {
     view.tx = drag.startTx + (p.x - drag.startPx.x);
     view.ty = drag.startTy + (p.y - drag.startPx.y);
+    e.preventDefault();
     return;
   }
 
@@ -493,14 +539,36 @@ function endPointer(e) {
 cv.addEventListener("pointerup", endPointer);
 cv.addEventListener("pointercancel", endPointer);
 cv.addEventListener("pointerleave", e => { if (!drag) hover = null; });
+// setPointerCapture が失敗した場合や、ウィンドウ外でボタンを離した場合のための補助
+window.addEventListener("pointerup", e => { if (drag || pinch) endPointer(e); });
+window.addEventListener("pointercancel", e => { if (drag || pinch) endPointer(e); });
+window.addEventListener("blur", () => {
+  if (drag && drag.mode === "pan") { drag = null; cv.style.cursor = (tool === "pan") ? "grab" : "crosshair"; }
+  spaceHeld = false;
+});
 
-// ホイール：カーソル位置を中心に拡大・縮小
+// ホイール：Ctrl（または Cmd）で拡大・縮小、Shift で左右、既定は上下＋横（タッチパッド）
 cv.addEventListener("wheel", e => {
   e.preventDefault();
-  const p = evPos(e);
-  const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
-  zoomAt(p.x, p.y, view.scale * factor);
+  if (e.ctrlKey || e.metaKey) {
+    const p = evPos(e);
+    const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+    zoomAt(p.x, p.y, view.scale * factor);
+  } else if (e.shiftKey) {
+    view.tx -= e.deltaY;
+  } else {
+    view.tx -= e.deltaX;
+    view.ty -= e.deltaY;
+  }
 }, { passive: false });
+
+// 端の移動ボタン・拡大縮小ボタン
+$("panUpBtn").onclick    = () => panBy(0,  80);
+$("panDownBtn").onclick  = () => panBy(0, -80);
+$("panLeftBtn").onclick  = () => panBy( 80, 0);
+$("panRightBtn").onclick = () => panBy(-80, 0);
+$("zoomInBtn").onclick   = () => zoomAt(W / 2, H / 2, view.scale * 1.2);
+$("zoomOutBtn").onclick  = () => zoomAt(W / 2, H / 2, view.scale / 1.2);
 
 document.querySelectorAll("[data-tool]").forEach(b => b.onclick = () => {
   tool = b.dataset.tool;
