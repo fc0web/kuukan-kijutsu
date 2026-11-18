@@ -174,9 +174,34 @@ let LOG = [];
 // view は見せ方だけの状態。空間（SPACE.shapes）は書き換えない。
 // screen_x = view.tx + gx * GRID * view.scale
 // screen_y = view.ty - gy * GRID * view.scale   （y 上向き）
+//
+// view は const の1つのオブジェクト。全ての読み書きはこの object に対して
+// 行い、参照が別れないようにする。保存・復元でも新しい object に差し替えず、
+// Object.assign でこの object に書き戻す。
 const VIEW_MIN = 0.2, VIEW_MAX = 5;
-let view = { scale: 1, tx: 0, ty: 0 };
+const view = { scale: 1, tx: 0, ty: 0 };
 let viewInit = false;
+const VIEW_STORAGE_KEY = "kuukan.view.v2";   // view は版付きの専用キーに保存
+// src の形が正しければ view に書き戻して true を返す。
+// 壊れた値・範囲外なら書き戻さず false。
+function tryApplyView(src) {
+  if (!src || typeof src !== "object") return false;
+  const s = Number(src.scale), tx = Number(src.tx), ty = Number(src.ty);
+  if (!Number.isFinite(s) || !Number.isFinite(tx) || !Number.isFinite(ty)) return false;
+  if (s < VIEW_MIN * 0.5 || s > VIEW_MAX * 2) return false;
+  // 既存オブジェクトに書き戻す（置き換えない）
+  view.scale = Math.max(VIEW_MIN, Math.min(VIEW_MAX, s));
+  view.tx = tx;
+  view.ty = ty;
+  setZoomIndicator();
+  return true;
+}
+function resetViewToDefault() {
+  view.scale = 1;
+  view.tx = 0;
+  view.ty = H;
+  setZoomIndicator();
+}
 function pxToGrid(px, py) {
   return {
     x: (px - view.tx) / (GRID * view.scale),
@@ -912,25 +937,38 @@ function renderPanels() {
 
 /* ================= 保存 ================= */
 function save() {
-  try { localStorage.setItem("kuukan-kijutsu-v02", JSON.stringify({ SPACE, nextId, seenKinds, LOG, snap, R, view })); } catch (e) { }
+  // 空間など重いものは従来キー。view だけは版付きの専用キーに切り出す。
+  try {
+    localStorage.setItem("kuukan-kijutsu-v02", JSON.stringify({ SPACE, nextId, seenKinds, LOG, snap, R }));
+  } catch (e) { }
+  try {
+    localStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify({ scale: view.scale, tx: view.tx, ty: view.ty }));
+  } catch (e) { }
 }
 function load() {
   initRules();
+  // SPACE など
   try {
     const d = JSON.parse(localStorage.getItem("kuukan-kijutsu-v02") || "null");
     if (d) {
       SPACE = d.SPACE || SPACE; nextId = d.nextId || nextId;
       seenKinds = d.seenKinds || {}; LOG = d.LOG || []; snap = d.snap !== false;
       if (d.R) for (const k in d.R) if (R[k]) Object.assign(R[k], d.R[k]);
-      if (d.view && typeof d.view.scale === "number") {
-        view.scale = Math.max(VIEW_MIN, Math.min(VIEW_MAX, d.view.scale));
-        view.tx = d.view.tx; view.ty = d.view.ty;
-        viewInit = true;
-      }
+      // 古い版（f2e76a0 以前）は view も同じキーに含めていた。あれば検査付きで取り込む。
+      if (d.view && tryApplyView(d.view)) viewInit = true;
       $("snapBtn").classList.toggle("on", snap);
-      setZoomIndicator();
     }
   } catch (e) { }
+  // 新しい view 専用キーが読めればそちらを優先。壊れていれば既定値に戻す。
+  try {
+    const raw = localStorage.getItem(VIEW_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (tryApplyView(parsed)) viewInit = true;
+      else resetViewToDefault();
+    }
+  } catch (e) { resetViewToDefault(); }
+  setZoomIndicator();
 }
 $("resetMem").onclick = () => { initRules(); seenKinds = {}; LOG = []; prevKeys = new Set(); changed(); };
 
