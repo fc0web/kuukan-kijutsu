@@ -50,6 +50,11 @@
     font-size:10.5px;color:var(--dim);background:#0c111dcc;padding:3px 10px;
     border-radius:6px;pointer-events:none;white-space:nowrap;
     max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis}
+  /* 一時的なデバッグ表示（?debug=1 のときだけ） */
+  .debug{position:absolute;left:12px;bottom:34px;font-size:10.5px;color:#a9c8ff;
+    background:#0c111de8;padding:5px 9px;border:1px solid #2f3b5c;border-radius:6px;
+    pointer-events:none;z-index:20;font-family:ui-monospace,Menlo,Consolas,monospace;
+    white-space:pre;line-height:1.4;max-width:60%}
   button{font:inherit;font-size:13px;border:1px solid #2f3b5c;background:#141c32cc;color:var(--ink);
     border-radius:8px;padding:7px 11px;cursor:pointer;backdrop-filter:blur(4px)}
   button:hover{background:#1f2a4dcc}
@@ -118,6 +123,7 @@
     <div class="hud" id="hud"></div>
     <div class="zoom" id="zoom">倍率 <b>100%</b></div>
     <div class="hint">ホイール：上下　Shift＋ホイール：左右　Ctrl＋ホイール：拡大　矢印キー：移動　✋ or 右ドラッグ：移動</div>
+    <div class="debug" id="debug" style="display:none"></div>
   </section>
 
   <aside>
@@ -355,12 +361,43 @@ function evGrid(e) { const p = evPos(e); return pxToGrid(p.x, p.y); }
 let spaceHeld = false;
 const activePointers = new Map();   // pointerId → {x, y, type}
 let pinch = null;                   // {dist, cx, cy, scale, tx, ty}
+const DEBUG = new URLSearchParams(location.search).has("debug");
 
 function isPanStart(e) {
-  // 左ボタン＋手のひら道具／左ボタン＋スペース／右ボタン／中ボタン
+  // 「buttons」ではなく「どの道具・どのモードか」で判定。
+  // 手のひら道具を選んでいるとき・スペース中・右／中ボタンのときは
+  // pointerType（mouse/pen/touch）や button 値によらず常にパンを始める。
+  if (tool === "pan") return true;
+  if (spaceHeld) return true;
   if (e.button === 2 || e.button === 1) return true;
-  if (e.button === 0 && (tool === "pan" || spaceHeld)) return true;
   return false;
+}
+
+/* ---- デバッグ表示 ---- */
+let lastPtrInfo = null;
+function targetLabel(t) {
+  if (!t || !t.tagName) return "-";
+  let s = t.tagName.toLowerCase();
+  if (t.id) s += "#" + t.id;
+  if (t.className && typeof t.className === "string") s += "." + t.className.trim().split(/\s+/).join(".");
+  return s;
+}
+function recordPtr(type, e) {
+  if (!DEBUG) return;
+  lastPtrInfo = {
+    type, pointerType: e.pointerType, button: e.button, buttons: e.buttons,
+    target: targetLabel(e.target), x: Math.round(e.clientX), y: Math.round(e.clientY)
+  };
+}
+function updateDebug() {
+  if (!DEBUG) return;
+  const lp = lastPtrInfo;
+  $("debug").textContent =
+    "tool: " + tool + "　space: " + spaceHeld + "　DPR: " + (window.devicePixelRatio || 1) + "\n" +
+    "pan: " + (drag && drag.mode === "pan" ? "YES" : "no") + "　drag: " + (drag ? drag.mode : "-") + "　pinch: " + (pinch ? "yes" : "no") + "\n" +
+    "view: scale=" + view.scale.toFixed(3) + "　tx=" + Math.round(view.tx) + "　ty=" + Math.round(view.ty) + "\n" +
+    "last ptr: " + (lp ? (lp.type + " / " + lp.pointerType + " / button=" + lp.button + " / buttons=" + lp.buttons + " @ (" + lp.x + "," + lp.y + ")") : "-") + "\n" +
+    "target: " + (lp ? lp.target : "-");
 }
 
 function panBy(dx, dy) { view.tx += dx; view.ty += dy; }
@@ -391,7 +428,8 @@ document.addEventListener("keyup", e => {
 cv.addEventListener("contextmenu", e => e.preventDefault());
 
 cv.addEventListener("pointerdown", e => {
-  try { cv.setPointerCapture(e.pointerId); } catch (_) { /* 失敗しても window の fallback で受ける */ }
+  recordPtr("down", e);
+  try { cv.setPointerCapture(e.pointerId); } catch (_) { /* 失敗しても document fallback で受ける */ }
   const p = evPos(e);
   activePointers.set(e.pointerId, { x: p.x, y: p.y, type: e.pointerType });
 
@@ -411,9 +449,14 @@ cv.addEventListener("pointerdown", e => {
   // 2本目以降（タッチ以外）は無視
   if (activePointers.size > 1) return;
 
-  // 視点ドラッグ
+  // 視点ドラッグ：pointerdown を受けたら、pointerup まで「パン中」の状態を
+  // 保つ（button/buttons 値をその後見ない）。手のひら道具のときは、
+  // 図形や点の上から始まっても必ずパンにする。
   if (isPanStart(e)) {
-    drag = { mode: "pan", startPx: p, startTx: view.tx, startTy: view.ty };
+    drag = {
+      mode: "pan", pointerId: e.pointerId,
+      startPx: p, startTx: view.tx, startTy: view.ty
+    };
     cv.style.cursor = "grabbing";
     // 実マウスのドラッグで文字選択・画像ドラッグに持っていかれないよう止める
     e.preventDefault();
@@ -447,6 +490,7 @@ cv.addEventListener("pointerdown", e => {
   }
 });
 cv.addEventListener("pointermove", e => {
+  recordPtr("move", e);
   const p = evPos(e);
   if (activePointers.has(e.pointerId)) {
     const rec = activePointers.get(e.pointerId);
@@ -463,7 +507,6 @@ cv.addEventListener("pointermove", e => {
     let s = pinch.scale * k;
     s = Math.max(VIEW_MIN, Math.min(VIEW_MAX, s));
     const ratio = s / pinch.scale;
-    // ピンチ開始時の中心が固定点になるように tx, ty を合わせ、さらに指の動きで中心を平行移動
     view.scale = s;
     view.tx = cx - ratio * (pinch.cx - pinch.tx);
     view.ty = cy - ratio * (pinch.cy - pinch.ty);
@@ -471,13 +514,8 @@ cv.addEventListener("pointermove", e => {
     return;
   }
 
-  // パンドラッグ
-  if (drag && drag.mode === "pan") {
-    view.tx = drag.startTx + (p.x - drag.startPx.x);
-    view.ty = drag.startTy + (p.y - drag.startPx.y);
-    e.preventDefault();
-    return;
-  }
+  // パン中は document fallback 側だけで更新する（取りこぼし防止）
+  if (drag && drag.mode === "pan") return;
 
   const g = evGrid(e);
   hover = snapGrid(g);
@@ -494,11 +532,25 @@ cv.addEventListener("pointermove", e => {
     }
   }
 });
+
+// パンは document 側でも受ける：setPointerCapture が効かない環境や、
+// pointer が canvas から外れても view が追従する。
+document.addEventListener("pointermove", e => {
+  if (!drag || drag.mode !== "pan") return;
+  if (drag.pointerId !== undefined && e.pointerId !== drag.pointerId) return;
+  const p = evPos(e);
+  view.tx = drag.startTx + (p.x - drag.startPx.x);
+  view.ty = drag.startTy + (p.y - drag.startPx.y);
+  // 文字選択・画像ドラッグなどの既定挙動を抑える
+  e.preventDefault();
+}, { passive: false });
 function endPointer(e) {
+  recordPtr("up", e);
   activePointers.delete(e.pointerId);
   if (activePointers.size < 2) pinch = null;
 
-  if (drag && drag.mode === "pan") {
+  if (drag && drag.mode === "pan"
+      && (drag.pointerId === undefined || e.pointerId === drag.pointerId)) {
     drag = null;
     cv.style.cursor = (tool === "pan" || spaceHeld) ? "grab" : "crosshair";
     return;
@@ -1034,7 +1086,7 @@ function render() {
   }
   $("hud").innerHTML = `点 <b>${getPoints().length}</b>　線 <b>${getSegments().length}</b>　円 <b>${getCircles().length}</b>　曲線 <b>${getCurves().length}</b>　${SPACE.step} 手目　｜　読み手 <b>${READERS.length}</b>（${READERS.map(r => r.id).join(", ")}）`;
 }
-function tick() { render(); requestAnimationFrame(tick); }
+function tick() { render(); if (DEBUG) updateDebug(); requestAnimationFrame(tick); }
 
 /* ================= 音 ================= */
 let AC = null, sfxOn = true, bgmOn = false, bgm = [];
@@ -1064,6 +1116,7 @@ $("sfxBtn").onclick = () => { sfxOn = !sfxOn; $("sfxBtn").textContent = "効果�
 /* ================= 起動 ================= */
 resize(); load();
 changed();
+if (DEBUG) { $("debug").style.display = "block"; updateDebug(); }
 requestAnimationFrame(tick);
 </script>
 </body>
