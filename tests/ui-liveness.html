@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>UI 生存性テスト（ドラッグ中/後に render が続くか）</title>
+<style>
+  :root { color-scheme: dark }
+  body { background: #0e1424; color: #e6ecff; font: 13px/1.6 ui-monospace,Menlo,Consolas,monospace; margin: 0; padding: 20px }
+  h1 { font-size: 15px; margin: 0 0 10px }
+  p { margin: 0 0 10px; color: #b7c2db }
+  #log { white-space: pre-wrap; background: #0a1024; padding: 10px; border: 1px solid #2f3b5c; border-radius: 6px; min-height: 160px; margin-bottom: 10px }
+  .pass { color: #7fd97f }
+  .fail { color: #ff7f7f }
+  .muted { color: #93a1c4 }
+  iframe { width: 960px; height: 560px; border: 1px solid #2f3b5c; border-radius: 6px; background: #0a1024 }
+</style>
+</head>
+<body>
+<h1>再発防止：手のひら・右ドラッグ・スペース＋ドラッグ中／後に描画が続くか</h1>
+<p class="muted">v0.2/index.html を内側に読み込み、window.render を包んで「呼び出し回数」を数えます。
+ドラッグ開始後・移動中・終了後、それぞれで render がさらに進むことを確かめます。
+自動で全ケースを走らせ、合否を表示します。</p>
+<div id="log">起動中…</div>
+<iframe id="f" src="../v0.2/index.html"></iframe>
+
+<script>
+"use strict";
+const logEl = document.getElementById("log");
+function line(cls, s) {
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = (cls === "pass" ? "✓ " : cls === "fail" ? "✗ " : "") + s + "\n";
+  logEl.appendChild(span);
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function waitFrames(iw, n) {
+  const start = iw.__renderCount__;
+  const deadline = Date.now() + 2000;
+  while ((iw.__renderCount__ - start) < n) {
+    if (Date.now() > deadline) break;
+    await sleep(16);
+  }
+  return iw.__renderCount__ - start;
+}
+
+function makePointerEvent(type, x, y, opts) {
+  opts = opts || {};
+  return new PointerEvent(type, {
+    pointerId: opts.pointerId || 1,
+    pointerType: opts.pointerType || "mouse",
+    button: opts.button != null ? opts.button : 0,
+    buttons: opts.buttons != null ? opts.buttons : 0,
+    clientX: x, clientY: y,
+    bubbles: true, cancelable: true, isPrimary: true
+  });
+}
+
+function keyEvent(iw, type, key) {
+  const ev = new KeyboardEvent(type, {
+    key, code: (key === " " ? "Space" : key),
+    bubbles: true, cancelable: true
+  });
+  iw.document.dispatchEvent(ev);
+  return ev;
+}
+
+async function runScenario(name, iw, prep, cleanup, pointerOpts) {
+  const cv = iw.document.getElementById("cv");
+  const r = cv.getBoundingClientRect();
+  const x0 = r.left + 150, y0 = r.top + 150;
+  const x1 = r.left + 350, y1 = r.top + 280;
+
+  if (prep) prep(iw);
+
+  const downOpts = Object.assign({ button: 0, buttons: 1 }, pointerOpts || {});
+  const moveOpts = Object.assign({ button: -1, buttons: downOpts.buttons }, pointerOpts || {});
+  const upOpts   = Object.assign({ button: downOpts.button, buttons: 0 }, pointerOpts || {});
+
+  const base = iw.__renderCount__;
+  cv.dispatchEvent(makePointerEvent("pointerdown", x0, y0, downOpts));
+  const afterDown = await waitFrames(iw, 2);
+
+  let afterMove = 0;
+  for (let i = 1; i <= 6; i++) {
+    const t = i / 6;
+    const mx = x0 + (x1 - x0) * t, my = y0 + (y1 - y0) * t;
+    const target = iw.document.elementFromPoint(mx, my) || cv;
+    target.dispatchEvent(makePointerEvent("pointermove", mx, my, moveOpts));
+    iw.document.dispatchEvent(makePointerEvent("pointermove", mx, my, moveOpts));
+    await sleep(25);
+  }
+  afterMove = iw.__renderCount__ - base - afterDown;
+
+  cv.dispatchEvent(makePointerEvent("pointerup", x1, y1, upOpts));
+  iw.document.dispatchEvent(makePointerEvent("pointerup", x1, y1, upOpts));
+  await sleep(50);
+  const afterUp = await waitFrames(iw, 3);
+
+  if (cleanup) cleanup(iw);
+
+  const ok = afterDown >= 2 && afterMove >= 2 && afterUp >= 3;
+  line(ok ? "pass" : "fail",
+    name + "：down→" + afterDown + "f、move中→" + afterMove + "f、up後→" + afterUp + "f");
+  return ok;
+}
+
+(async function main() {
+  const f = document.getElementById("f");
+  await new Promise(res => f.addEventListener("load", res, { once: true }));
+  const iw = f.contentWindow;
+  // 内側の tick が走り始めるまで少し待つ
+  await sleep(200);
+
+  if (typeof iw.render !== "function") {
+    line("fail", "内側の render が見つからない（グローバル関数で定義されていない）");
+    return;
+  }
+
+  // render を包んで呼び出し回数を数える
+  iw.__renderCount__ = 0;
+  const origRender = iw.render;
+  iw.render = function wrappedRender() {
+    iw.__renderCount__++;
+    return origRender.apply(this, arguments);
+  };
+  line("", "render をフックしました。");
+
+  const warmup = await waitFrames(iw, 5);
+  line(warmup >= 5 ? "pass" : "fail",
+    "起動時に " + warmup + " フレーム進んだ（最低 5 を期待）");
+
+  const results = [];
+
+  // 1. 手のひら道具でのドラッグ
+  results.push(await runScenario(
+    "手のひら（pan ツール）",
+    iw,
+    (w) => w.document.querySelector('button[data-tool="pan"]').click(),
+    (w) => w.document.querySelector('button[data-tool="line"]').click(),
+    { button: 0, buttons: 1 }
+  ));
+
+  // 2. 右ドラッグ（line ツールのまま、右ボタンでパン）
+  results.push(await runScenario(
+    "右ドラッグ（line 道具・右ボタン）",
+    iw,
+    null,
+    null,
+    { button: 2, buttons: 2 }
+  ));
+
+  // 3. スペース＋ドラッグ（左ボタン）
+  results.push(await runScenario(
+    "スペース＋左ドラッグ（line 道具）",
+    iw,
+    (w) => keyEvent(w, "keydown", " "),
+    (w) => keyEvent(w, "keyup", " "),
+    { button: 0, buttons: 1 }
+  ));
+
+  // 最後に、総合で warmup 時点からの絶対フレーム数が増えていること
+  const finalFrames = iw.__renderCount__;
+  line("", "最終フレーム数: " + finalFrames);
+
+  const allOk = results.every(x => x);
+  line(allOk ? "pass" : "fail", "総合：" + (allOk ? "PASS" : "FAIL"));
+  document.title = (allOk ? "✓ " : "✗ ") + "UI 生存性テスト";
+  window.__uiLivenessResult__ = { ok: allOk, results, finalFrames, warmup };
+})();
+</script>
+</body>
+</html>

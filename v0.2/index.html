@@ -1099,7 +1099,7 @@ function render() {
       const q = gridToPx(last.x, last.y);
       ctx.fillStyle = "#ffb4ff"; ctx.font = "11px ui-monospace,monospace";
       ctx.fillText(`${drag.pts.length} 点`, q.x + 8, q.y - 8);
-    } else {
+    } else if (drag.mode === "line" || drag.mode === "circle") {
       const a = gridToPx(drag.from.x, drag.from.y), b = gridToPx(drag.to.x, drag.to.y);
       const dLen = Math.hypot(drag.from.x - drag.to.x, drag.from.y - drag.to.y);
       ctx.setLineDash([5, 5]); ctx.lineWidth = 1.5;
@@ -1124,7 +1124,14 @@ function render() {
   }
   $("hud").innerHTML = `点 <b>${getPoints().length}</b>　線 <b>${getSegments().length}</b>　円 <b>${getCircles().length}</b>　曲線 <b>${getCurves().length}</b>　${SPACE.step} 手目　｜　読み手 <b>${READERS.length}</b>（${READERS.map(r => r.id).join(", ")}）`;
 }
-function tick() { render(); if (DEBUG) updateDebug(); requestAnimationFrame(tick); }
+// 描画で例外が出ても、次のフレームの予約は必ず続ける（1回の例外で画面が止まらないように）
+let renderErrCount = 0;
+function tick() {
+  try { render(); }
+  catch (err) { if (renderErrCount++ < 3) console.error("render error:", err); }
+  try { if (DEBUG) updateDebug(); } catch (err) { }
+  requestAnimationFrame(tick);
+}
 
 /* ================= 音 ================= */
 let AC = null, sfxOn = true, bgmOn = false, bgm = [];
