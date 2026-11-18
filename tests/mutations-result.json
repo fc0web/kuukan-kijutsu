@@ -1,7 +1,7 @@
 {
-  "count": 23,
+  "count": 26,
   "all_rejected": true,
-  "rejected_count": 23,
+  "rejected_count": 26,
   "passed_through_by_mistake": 0,
   "outcome": [
     {
@@ -195,20 +195,47 @@
     },
     {
       "name": "wrong-curve-length-doubled",
-      "note": "正方形トレース（長さ ≈ 40）に「長さ 100」の札（check: 半分に間引いた折れ線で 40 近辺 → ±5% の外）",
+      "note": "正方形トレース（長さ ≈ 40）に「長さ 100」の札（check: 半分に間引いた折れ線で 40 近辺 → ±1% の外）",
       "finding_type": "curve:length",
       "finding_title": "曲線の長さ",
       "check_pass": false,
-      "method": "点を半分に間引いた折れ線で長さを再計算、±5％ 以内で一致を確認（間引き比 0.4000）",
+      "method": "点を半分に間引いた折れ線で長さを再計算、±1％ 以内で一致を確認（間引き比 0.4000）",
       "expected": "pass:false（間違った発見は check で落ちるべき）"
     },
     {
       "name": "wrong-curve-area-doubled",
-      "note": "正方形トレース（面積 ≈ 100）に「面積 200」の札（check: 半分に間引いた靴ひもで 100 近辺 → ±5% の外）",
+      "note": "正方形トレース（面積 ≈ 100）に「面積 200」の札（check: 半分に間引いた靴ひもで 100 近辺 → ±1% の外）",
       "finding_type": "curve:area",
       "finding_title": "曲線が囲む面積",
       "check_pass": false,
-      "method": "点を半分に間引いた閉じた折れ線で靴ひも公式を再計算、±5％ 以内で一致（差 50.00％）",
+      "method": "点を半分に間引いた閉じた折れ線で靴ひも公式を再計算、±1％ 以内で一致（差 50.00％）",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-curve-length-plus-3pct",
+      "note": "正方形トレース（長さ ≈ 40）に「長さ 41.2」の札（+3% 捏造・±5% なら通ってしまうが ±1% なら落ちる）",
+      "finding_type": "curve:length",
+      "finding_title": "曲線の長さ",
+      "check_pass": false,
+      "method": "点を半分に間引いた折れ線で長さを再計算、±1％ 以内で一致を確認（間引き比 0.9709）",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-curve-area-minus-3pct",
+      "note": "正方形トレース（面積 ≈ 100）に「面積 97」の札（−3% 捏造・±5% なら通ってしまうが ±1% なら落ちる）",
+      "finding_type": "curve:area",
+      "finding_title": "曲線が囲む面積",
+      "check_pass": false,
+      "method": "点を半分に間引いた閉じた折れ線で靴ひも公式を再計算、±1％ 以内で一致（差 3.09％）",
+      "expected": "pass:false（間違った発見は check で落ちるべき）"
+    },
+    {
+      "name": "wrong-figure-8-two-crossings",
+      "note": "8 の字（実際は 1 回自己交差）に「自分と 2 回交わる」の札（check: 向きの符号で 1 回 → 不一致で落ちる）",
+      "finding_type": "curve:self-intersection",
+      "finding_title": "曲線が自分と 2 回交わる",
+      "check_pass": false,
+      "method": "折れ線の全ペアを 向き（外積の符号）で数えて照合（独立の方法）",
       "expected": "pass:false（間違った発見は check で落ちるべき）"
     }
   ],
@@ -238,17 +265,17 @@
       "circle-line": "|d − r| < TOL × max(r, 1)",
       "circle-circle": "|d − (r1±r2)| < TOL × max(r1+r2, 1)",
       "circle-triangle": "3 頂点/3 辺への距離の差 < TOL × max(r, 1)",
-      "curve:length": "全点の折れ線長。確かめ：半分に間引いた版と ±5％ 以内で一致",
+      "curve:length": "全点の折れ線長。確かめ：半分に間引いた版と ±1％ 以内で一致",
       "curve:closure": "始終点の距離 < 0.3 マスなら閉じている",
       "curve:self-intersection": "非隣接の全ペアの交差を数える（read: t,u 媒介／check: 向きの符号）",
-      "curve:area": "閉じて自己交差なしのときに靴ひも公式。確かめ：半分に間引いた版と ±5％ 以内"
+      "curve:area": "閉じて自己交差なしのときに靴ひも公式。確かめ：半分に間引いた版と ±1％ 以内"
     },
     "curve": {
       "max_points": 2000,
       "thinning_step_grid": 0.1,
       "closure_tol_grid": 0.3,
-      "length_tol_rel": 0.05,
-      "area_tol_rel": 0.05,
+      "length_tol_rel": 0.01,
+      "area_tol_rel": 0.01,
       "note": "曲線は certainty を常に「許容内」とし、既存の規則（予想）の当たり外れには用いない"
     }
   }

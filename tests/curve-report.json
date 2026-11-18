@@ -25,17 +25,17 @@
       "circle-line": "|d − r| < TOL × max(r, 1)",
       "circle-circle": "|d − (r1±r2)| < TOL × max(r1+r2, 1)",
       "circle-triangle": "3 頂点/3 辺への距離の差 < TOL × max(r, 1)",
-      "curve:length": "全点の折れ線長。確かめ：半分に間引いた版と ±5％ 以内で一致",
+      "curve:length": "全点の折れ線長。確かめ：半分に間引いた版と ±1％ 以内で一致",
       "curve:closure": "始終点の距離 < 0.3 マスなら閉じている",
       "curve:self-intersection": "非隣接の全ペアの交差を数える（read: t,u 媒介／check: 向きの符号）",
-      "curve:area": "閉じて自己交差なしのときに靴ひも公式。確かめ：半分に間引いた版と ±5％ 以内"
+      "curve:area": "閉じて自己交差なしのときに靴ひも公式。確かめ：半分に間引いた版と ±1％ 以内"
     },
     "curve": {
       "max_points": 2000,
       "thinning_step_grid": 0.1,
       "closure_tol_grid": 0.3,
-      "length_tol_rel": 0.05,
-      "area_tol_rel": 0.05,
+      "length_tol_rel": 0.01,
+      "area_tol_rel": 0.01,
       "note": "曲線は certainty を常に「許容内」とし、既存の規則（予想）の当たり外れには用いない"
     }
   },
@@ -97,13 +97,23 @@
       "actual": {
         "closed": true,
         "crossings": 1,
-        "length": 12.944271909999156,
+        "length": null,
         "has_area": false,
         "area": null
       },
-      "problems": [],
-      "rejected": [],
-      "ok": true
+      "problems": [
+        "curve:length finding missing"
+      ],
+      "rejected": [
+        {
+          "finding_type": "curve:length",
+          "refs": [
+            1
+          ],
+          "method": "点を半分に間引いた折れ線で長さを再計算、±1％ 以内で一致を確認（間引き比 0.9854）"
+        }
+      ],
+      "ok": false
     },
     "open-zigzag": {
       "description": "開いたジグザグ（左右に 5 回振る）",

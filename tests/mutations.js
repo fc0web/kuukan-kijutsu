@@ -536,7 +536,7 @@ const mutations = [
   },
   {
     name: "wrong-curve-length-doubled",
-    note: "正方形トレース（長さ ≈ 40）に「長さ 100」の札（check: 半分に間引いた折れ線で 40 近辺 → ±5% の外）",
+    note: "正方形トレース（長さ ≈ 40）に「長さ 100」の札（check: 半分に間引いた折れ線で 40 近辺 → ±1% の外）",
     space: spaces.curveSquareClosed,
     finding: {
       key: "geometry:curve:length:1",
@@ -549,7 +549,7 @@ const mutations = [
   },
   {
     name: "wrong-curve-area-doubled",
-    note: "正方形トレース（面積 ≈ 100）に「面積 200」の札（check: 半分に間引いた靴ひもで 100 近辺 → ±5% の外）",
+    note: "正方形トレース（面積 ≈ 100）に「面積 200」の札（check: 半分に間引いた靴ひもで 100 近辺 → ±1% の外）",
     space: spaces.curveSquareClosed,
     finding: {
       key: "geometry:curve:area:1",
@@ -557,6 +557,45 @@ const mutations = [
       type: "curve:area",
       title: "曲線が囲む面積",
       value: { area: 200 },
+      refs: [1], certainty: "許容内", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-curve-length-plus-3pct",
+    note: "正方形トレース（長さ ≈ 40）に「長さ 41.2」の札（+3% 捏造・±5% なら通ってしまうが ±1% なら落ちる）",
+    space: spaces.curveSquareClosed,
+    finding: {
+      key: "geometry:curve:length:1",
+      reader: "geometry",
+      type: "curve:length",
+      title: "曲線の長さ",
+      value: { length: 41.2, n_pts: 400, closed: true },
+      refs: [1], certainty: "許容内", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-curve-area-minus-3pct",
+    note: "正方形トレース（面積 ≈ 100）に「面積 97」の札（−3% 捏造・±5% なら通ってしまうが ±1% なら落ちる）",
+    space: spaces.curveSquareClosed,
+    finding: {
+      key: "geometry:curve:area:1",
+      reader: "geometry",
+      type: "curve:area",
+      title: "曲線が囲む面積",
+      value: { area: 97 },
+      refs: [1], certainty: "許容内", basis: "（捏造）"
+    }
+  },
+  {
+    name: "wrong-figure-8-two-crossings",
+    note: "8 の字（実際は 1 回自己交差）に「自分と 2 回交わる」の札（check: 向きの符号で 1 回 → 不一致で落ちる）",
+    space: spaces.curveFigure8,
+    finding: {
+      key: "geometry:curve:self-intersection:1",
+      reader: "geometry",
+      type: "curve:self-intersection",
+      title: "曲線が自分と 2 回交わる",
+      value: { count: 2 },
       refs: [1], certainty: "許容内", basis: "（捏造）"
     }
   }

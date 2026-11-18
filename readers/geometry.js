@@ -12,8 +12,8 @@
   const VERSION = "0.4.0";
   const ACCEPTS = ["point", "segment", "circle", "curve"];
   const CURVE_CLOSURE_TOL = 0.3;        // マス単位：始終点がこれ以内なら閉じている
-  const CURVE_LENGTH_TOL = 0.05;        // ±5% 以内（半分間引き照合）
-  const CURVE_AREA_TOL = 0.05;          // ±5% 以内（半分間引き照合）
+  const CURVE_LENGTH_TOL = 0.01;        // ±1% 以内（半分間引き照合）
+  const CURVE_AREA_TOL = 0.01;          // ±1% 以内（半分間引き照合）
 
   // --- 幾何の道具（純粋関数） -----------------------------------------
   const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
