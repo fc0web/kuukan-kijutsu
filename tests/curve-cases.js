@@ -50,6 +50,21 @@ function figureEightPts(step) {
   return densifyPolyline([[-2, -1], [-2, 1], [2, -1], [2, 1], [-2, -1]], step);
 }
 
+// 細かい揺れ（手ぶれ）を乗せた円。
+// jitterAmp マスの振幅で、位相の違う2本のサイン波を足して決定的に生成。
+function jitteredCirclePts(cx, cy, r, step, jitterAmp) {
+  const pts = [];
+  const n = Math.ceil(2 * Math.PI * r / step);
+  for (let i = 0; i < n; i++) {
+    const t = i * 2 * Math.PI / n;
+    // 高めの周波数で震えを入れる（隣り合う点で向きが揺らぐように）
+    const nx = jitterAmp * Math.sin(i * 1.7);
+    const ny = jitterAmp * Math.cos(i * 1.9);
+    pts.push([cx + r * Math.cos(t) + nx, cy + r * Math.sin(t) + ny]);
+  }
+  return pts;
+}
+
 // --- ケース ---------------------------------------------------------
 const cases = [
   {
@@ -107,7 +122,14 @@ const cases = [
     rationale: "頂点 (0,0)→(3,0)→(3,3)→(1,3)→(1,1) を密化。長さ 3+3+2+2 = 10。自己交差なし。開いているので面積なし。",
     shape: () => ({ id: 1, kind: "curve", pts: densifyPolyline([[0, 0], [3, 0], [3, 3], [1, 3], [1, 1]], 0.1), closed: false }),
     expected: { closed: false, crossings: 0, length_about: 10.0, length_tol: 0.005, no_area: true }
+  },
+  {
+    name: "jittered-circle",
+    description: "半径 5 の円に細かい揺れ（振幅 0.05 マス）を乗せたなぞり（手ぶれ対策）",
+    rationale: "半径 5・0.1 マス間隔の円に、位相の違う2本のサイン波（周波数 1.7 と 1.9 rad/点）で 0.05 マス振幅の揺れを乗せる。周波数が高いため隣り合う辺の向きが 20° を越えて揺らぎ、check の「角を守る間引き」は揺らぎの多くを「角」と誤認する → 残った点が多い → 間引きは効きにくいが、thinned と full が近いので ±1% は通る（頑健なフォールバック）。長さは折れ線として 36.560（元の円周の約 1.16 倍、揺れの寄り道を含む）、面積は揺れが平均化されて 78.534 で元の π·25 ≈ 78.540 に近い。",
+    shape: () => ({ id: 1, kind: "curve", pts: jitteredCirclePts(0, 0, 5, 0.1, 0.05), closed: true }),
+    expected: { closed: true, crossings: 0, length_about: 36.560, length_tol: 0.001, area_about: 78.534, area_tol: 0.001 }
   }
 ];
 
-module.exports = { cases, circlePts, squarePts, densifyPolyline, figureEightPts };
+module.exports = { cases, circlePts, squarePts, densifyPolyline, figureEightPts, jitteredCirclePts };

@@ -14,6 +14,7 @@
   const CURVE_CLOSURE_TOL = 0.3;        // マス単位：始終点がこれ以内なら閉じている
   const CURVE_LENGTH_TOL = 0.01;        // ±1% 以内（半分間引き照合）
   const CURVE_AREA_TOL = 0.01;          // ±1% 以内（半分間引き照合）
+  const CURVE_CORNER_DEG = 20;          // 角を守る間引きのしきい値（向き変化がこれ以上なら「角」）
 
   // --- 幾何の道具（純粋関数） -----------------------------------------
   const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
@@ -289,6 +290,42 @@
 
   function segKeyStr(a, b) {
     return a < b ? a + "-" + b : b + "-" + a;
+  }
+
+  // 「角を守る半分間引き」：
+  //   向きの変化が CURVE_CORNER_DEG 以上の点、始点・終点は必ず残し、
+  //   残りの点を半分に間引く（非角のうち偶数番目のみ残す）。
+  //   check 用の独立計算で、単純な隔点間引きが figure-8 のような
+  //   鋭い角を素通りして長さを削ぎ落としてしまうのを避ける。
+  function cornerPreservingThin(pts, closed) {
+    const n = pts.length;
+    if (n < 3) return { kept: pts.slice(), cornerCount: 0 };
+    const cornerRad = CURVE_CORNER_DEG * Math.PI / 180;
+    const corners = new Set([0, n - 1]);
+    for (let i = 1; i < n - 1; i++) {
+      const dx1 = pts[i][0] - pts[i - 1][0];
+      const dy1 = pts[i][1] - pts[i - 1][1];
+      const dx2 = pts[i + 1][0] - pts[i][0];
+      const dy2 = pts[i + 1][1] - pts[i][1];
+      const l1 = Math.hypot(dx1, dy1);
+      const l2 = Math.hypot(dx2, dy2);
+      if (l1 < 1e-12 || l2 < 1e-12) continue;
+      const cos = (dx1 * dx2 + dy1 * dy2) / (l1 * l2);
+      const ang = Math.acos(Math.max(-1, Math.min(1, cos)));
+      if (ang >= cornerRad) corners.add(i);
+    }
+    const kept = [];
+    let nonCornerIdx = 0;
+    for (let i = 0; i < n; i++) {
+      if (corners.has(i)) {
+        kept.push(pts[i]);
+      } else {
+        if (nonCornerIdx % 2 === 0) kept.push(pts[i]);
+        nonCornerIdx++;
+      }
+    }
+    // 始点・終点を 2 とカウントするので、「角」は内側のみの数
+    return { kept, cornerCount: corners.size - 2 };
   }
 
   // --- read -----------------------------------------------------------
@@ -665,8 +702,8 @@
         value: { length: L, n_pts: pts.length, closed },
         basis: "折れ線として隣り合う点の距離を合計"
              + (closed ? "（閉じ辺を含む）" : "")
-             + "　／　許容：点を半分に間引いた折れ線と ±" + (CURVE_LENGTH_TOL * 100).toFixed(0)
-             + "％ 以内で一致（間引き間隔 ≈ 0.1 マス）",
+             + "　／　許容：角（向き変化 ≥ " + CURVE_CORNER_DEG + "°）と始点・終点を残して非角を半分に間引いた折れ線と ±"
+             + (CURVE_LENGTH_TOL * 100).toFixed(0) + "％ 以内で一致",
         refs: [c.id],
         certainty: "許容内"
       });
@@ -707,7 +744,8 @@
           title: "曲線が囲む面積",
           value: { area: A },
           basis: "閉じた折れ線として靴ひも公式で面積を算出"
-               + "　／　許容：点を半分に間引いた版と ±" + (CURVE_AREA_TOL * 100).toFixed(0) + "％ 以内で一致",
+               + "　／　許容：角（向き変化 ≥ " + CURVE_CORNER_DEG + "°）と始点・終点を残して非角を半分に間引いた折れ線と ±"
+               + (CURVE_AREA_TOL * 100).toFixed(0) + "％ 以内で一致",
           refs: [c.id],
           certainty: "許容内"
         });
@@ -1023,25 +1061,25 @@
     }
 
     // --- 曲線：長さ ---
-    // read は全点の折れ線長。check は点を半分に間引いた版で再計算し、
-    // ±CURVE_LENGTH_TOL 以内で一致するかを確認（間引きは三角不等式で
-    // 常に長さを短くしかしない）。
+    // read は全点の折れ線長。check は「角を守る半分間引き」で再計算し、
+    // ±CURVE_LENGTH_TOL 以内で一致するかを確認。角（向き変化 ≥
+    // CURVE_CORNER_DEG°）と始終点は必ず残す。間引きは三角不等式で
+    // 常に長さを短くしかしない。
     if (finding.type === "curve:length") {
       const cid = finding.refs[0];
       const curve = shapes.find(s => s.kind === "curve" && s.id === cid);
       if (!curve) return { pass: false, method: "対象の曲線が見つからない" };
-      const half = curve.pts.filter((_, i) => i % 2 === 0);
-      if (half.length < 2) return { pass: false, method: "間引きで点が足りない" };
-      const halfL = curvePathLength(half, !!curve.closed);
+      const thinned = cornerPreservingThin(curve.pts, !!curve.closed);
+      if (thinned.kept.length < 2) return { pass: false, method: "間引きで点が足りない" };
+      const halfL = curvePathLength(thinned.kept, !!curve.closed);
       const orig = finding.value.length;
       if (orig <= 1e-9) return { pass: false, method: "長さが 0 とされている" };
       const rel = halfL / orig;
-      // 半分版は 元の長さ以下（三角不等式）、かつ ±5% 以内
       const upperOk = rel <= 1 + 1e-3;
       const lowerOk = rel >= 1 - CURVE_LENGTH_TOL;
       return {
         pass: upperOk && lowerOk,
-        method: "点を半分に間引いた折れ線で長さを再計算、±" + (CURVE_LENGTH_TOL * 100).toFixed(0) + "％ 以内で一致を確認（間引き比 " + rel.toFixed(4) + "）"
+        method: "角を守る半分間引き（" + curve.pts.length + " 点 → " + thinned.kept.length + " 点、内側の角 " + thinned.cornerCount + " 個）で長さを再計算、±" + (CURVE_LENGTH_TOL * 100).toFixed(0) + "％ 以内で一致を確認（間引き比 " + rel.toFixed(4) + "）"
       };
     }
 
@@ -1084,21 +1122,21 @@
     }
 
     // --- 曲線：面積 ---
-    // read は全点の靴ひも公式。check は点を半分に間引いた版で再計算。
+    // read は全点の靴ひも公式。check は「角を守る半分間引き」で再計算。
     if (finding.type === "curve:area") {
       const cid = finding.refs[0];
       const curve = shapes.find(s => s.kind === "curve" && s.id === cid);
       if (!curve) return { pass: false, method: "対象の曲線が見つからない" };
       if (!curve.closed) return { pass: false, method: "曲線が閉じていない" };
-      const half = curve.pts.filter((_, i) => i % 2 === 0);
-      if (half.length < 3) return { pass: false, method: "間引きで点が足りない" };
-      const halfA = Math.abs(curveShoelace(half));
+      const thinned = cornerPreservingThin(curve.pts, !!curve.closed);
+      if (thinned.kept.length < 3) return { pass: false, method: "間引きで点が足りない" };
+      const halfA = Math.abs(curveShoelace(thinned.kept));
       const orig = finding.value.area;
       if (orig <= 1e-9) return { pass: false, method: "面積が 0 とされている" };
       const rel = Math.abs(halfA - orig) / orig;
       return {
         pass: rel < CURVE_AREA_TOL,
-        method: "点を半分に間引いた閉じた折れ線で靴ひも公式を再計算、±" + (CURVE_AREA_TOL * 100).toFixed(0) + "％ 以内で一致（差 " + (rel * 100).toFixed(2) + "％）"
+        method: "角を守る半分間引き（" + curve.pts.length + " 点 → " + thinned.kept.length + " 点、内側の角 " + thinned.cornerCount + " 個）で靴ひも公式を再計算、±" + (CURVE_AREA_TOL * 100).toFixed(0) + "％ 以内で一致（差 " + (rel * 100).toFixed(2) + "％）"
       };
     }
 
@@ -1125,10 +1163,10 @@
         "circle-line":     "|d − r| < TOL × max(r, 1)",
         "circle-circle":   "|d − (r1±r2)| < TOL × max(r1+r2, 1)",
         "circle-triangle": "3 頂点/3 辺への距離の差 < TOL × max(r, 1)",
-        "curve:length":    "全点の折れ線長。確かめ：半分に間引いた版と ±" + (CURVE_LENGTH_TOL * 100).toFixed(0) + "％ 以内で一致",
+        "curve:length":    "全点の折れ線長。確かめ：角（向き変化 ≥ " + CURVE_CORNER_DEG + "°）と始終点を残す半分間引き版と ±" + (CURVE_LENGTH_TOL * 100).toFixed(0) + "％ 以内で一致",
         "curve:closure":   "始終点の距離 < " + CURVE_CLOSURE_TOL + " マスなら閉じている",
         "curve:self-intersection": "非隣接の全ペアの交差を数える（read: t,u 媒介／check: 向きの符号）",
-        "curve:area":      "閉じて自己交差なしのときに靴ひも公式。確かめ：半分に間引いた版と ±" + (CURVE_AREA_TOL * 100).toFixed(0) + "％ 以内"
+        "curve:area":      "閉じて自己交差なしのときに靴ひも公式。確かめ：角（向き変化 ≥ " + CURVE_CORNER_DEG + "°）と始終点を残す半分間引き版と ±" + (CURVE_AREA_TOL * 100).toFixed(0) + "％ 以内"
       },
       curve: {
         max_points: 2000,
@@ -1136,7 +1174,8 @@
         closure_tol_grid: CURVE_CLOSURE_TOL,
         length_tol_rel: CURVE_LENGTH_TOL,
         area_tol_rel: CURVE_AREA_TOL,
-        note: "曲線は certainty を常に「許容内」とし、既存の規則（予想）の当たり外れには用いない"
+        corner_deg: CURVE_CORNER_DEG,
+        note: "曲線は certainty を常に「許容内」とし、既存の規則（予想）の当たり外れには用いない。check の間引きは「角を守る半分間引き」：向きの変化が corner_deg 以上の点と始終点を必ず残し、残りを半分に間引く。"
       }
     };
   }

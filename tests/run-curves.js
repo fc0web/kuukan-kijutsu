@@ -118,21 +118,35 @@ const cfg = Reader.settings();
 console.log("説明：" + cfg.description);
 console.log("[snap]    TOL=" + cfg.tolerance.snap.TOL + "、ANG=" + cfg.tolerance.snap.ANG_deg + "° ・" + cfg.tolerance.snap.note);
 console.log("[nonsnap] TOL=" + cfg.tolerance.nonsnap.TOL + "、ANG=" + cfg.tolerance.nonsnap.ANG_deg + "° ・" + cfg.tolerance.nonsnap.note);
-console.log("曲線の設定：max_points=" + cfg.curve.max_points + "、間引き間隔=" + cfg.curve.thinning_step_grid + " マス、閉じ許容=" + cfg.curve.closure_tol_grid + " マス、長さ/面積許容=" + (cfg.curve.length_tol_rel * 100) + "%");
+console.log("曲線の設定：max_points=" + cfg.curve.max_points + "、間引き間隔=" + cfg.curve.thinning_step_grid + " マス、閉じ許容=" + cfg.curve.closure_tol_grid + " マス、長さ/面積許容=" + (cfg.curve.length_tol_rel * 100) + "%、角しきい値=" + cfg.curve.corner_deg + "°");
 console.log("種類ごとの許容：");
 for (const k of Object.keys(cfg.byFinding)) console.log("  " + k + "：" + cfg.byFinding[k]);
 console.log("");
 console.log("=== 曲線のケース照合 ===");
 console.log("ケース数:", cases.length, " 合格:", passCount, " 不合格:", failCount);
 console.log("");
+// 各ケースの check 側の間引き情報（長さ check の method 文字列から抜く）
+function extractThin(name) {
+  const findings = answers[name] && answers[name].findings;
+  if (!findings) return null;
+  const f = findings.find(x => x.type === "curve:length");
+  if (!f || !f.method) return null;
+  const m = f.method.match(/（(\d+) 点 → (\d+) 点、内側の角 (\d+) 個）/);
+  if (!m) return null;
+  return { n: +m[1], kept: +m[2], corners: +m[3] };
+}
+
 for (const name of Object.keys(report)) {
   const r = report[name];
   const flag = r.ok ? "" : " ⚠";
   const a = r.actual;
+  const thin = extractThin(name);
+  const thinStr = thin ? (" / 間引き=" + thin.kept + "/" + thin.n + " (" + ((thin.kept / thin.n) * 100).toFixed(0) + "%)、角=" + thin.corners) : "";
   console.log("  " + name + ": 点数=" + r.pts_count +
     " / closed=" + a.closed + " / crossings=" + a.crossings +
     " / length=" + (a.length !== null ? a.length.toFixed(3) : "?") +
     " / area=" + (a.has_area ? a.area.toFixed(3) : "(なし)") +
+    thinStr +
     " / check 落ち=" + r.rejected.length + flag);
   if (r.problems.length) for (const p of r.problems) console.log("     ⚠ " + p);
 }
