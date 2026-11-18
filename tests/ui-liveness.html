@@ -34,13 +34,10 @@ function line(cls, s) {
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-async function waitFrames(iw, n) {
+// 指定時間だけ待って、その間に進んだ render 回数を返す
+async function framesInWindow(iw, ms) {
   const start = iw.__renderCount__;
-  const deadline = Date.now() + 2000;
-  while ((iw.__renderCount__ - start) < n) {
-    if (Date.now() > deadline) break;
-    await sleep(16);
-  }
+  await sleep(ms);
   return iw.__renderCount__ - start;
 }
 
@@ -77,11 +74,11 @@ async function runScenario(name, iw, prep, cleanup, pointerOpts) {
   const moveOpts = Object.assign({ button: -1, buttons: downOpts.buttons }, pointerOpts || {});
   const upOpts   = Object.assign({ button: downOpts.button, buttons: 0 }, pointerOpts || {});
 
-  const base = iw.__renderCount__;
+  // pointerdown 後、2 秒の間に render が何回進むか（iframe が throttling されていても ≥1 が目安）
   cv.dispatchEvent(makePointerEvent("pointerdown", x0, y0, downOpts));
-  const afterDown = await waitFrames(iw, 2);
+  const duringDown = await framesInWindow(iw, 2000);
 
-  let afterMove = 0;
+  // 続けて pointermove を 6 連打（合計 ~150ms）
   for (let i = 1; i <= 6; i++) {
     const t = i / 6;
     const mx = x0 + (x1 - x0) * t, my = y0 + (y1 - y0) * t;
@@ -90,18 +87,21 @@ async function runScenario(name, iw, prep, cleanup, pointerOpts) {
     iw.document.dispatchEvent(makePointerEvent("pointermove", mx, my, moveOpts));
     await sleep(25);
   }
-  afterMove = iw.__renderCount__ - base - afterDown;
+  // 最後の pointermove の直後、追加で 2 秒待って frame 数を数える
+  const duringMove = await framesInWindow(iw, 2000);
 
   cv.dispatchEvent(makePointerEvent("pointerup", x1, y1, upOpts));
   iw.document.dispatchEvent(makePointerEvent("pointerup", x1, y1, upOpts));
-  await sleep(50);
-  const afterUp = await waitFrames(iw, 3);
+  // pointerup 後、2 秒で render がまだ呼ばれ続けていることを確かめる
+  const afterUp = await framesInWindow(iw, 2000);
 
   if (cleanup) cleanup(iw);
 
-  const ok = afterDown >= 2 && afterMove >= 2 && afterUp >= 3;
+  // 不具合（render の例外で tick が止まる）なら rAF が切れて 0。生きていれば背景タブ throttling の 1fps でも ≥1
+  const TH = 1;
+  const ok = duringDown >= TH && duringMove >= TH && afterUp >= TH;
   line(ok ? "pass" : "fail",
-    name + "：down→" + afterDown + "f、move中→" + afterMove + "f、up後→" + afterUp + "f");
+    name + "：down 後 2s→" + duringDown + "f、move 後 2s→" + duringMove + "f、up 後 2s→" + afterUp + "f（各 ≥" + TH + " で合格）");
   return ok;
 }
 
@@ -126,9 +126,10 @@ async function runScenario(name, iw, prep, cleanup, pointerOpts) {
   };
   line("", "render をフックしました。");
 
-  const warmup = await waitFrames(iw, 5);
-  line(warmup >= 5 ? "pass" : "fail",
-    "起動時に " + warmup + " フレーム進んだ（最低 5 を期待）");
+  // 起動直後の 2 秒で何フレーム進むかを基準にする（iframe が throttling されていても ≥1 が目安）
+  const warmup = await framesInWindow(iw, 2000);
+  line(warmup >= 1 ? "pass" : "fail",
+    "起動直後 2s で " + warmup + " フレーム進んだ（最低 1 で合格）");
 
   const results = [];
 
